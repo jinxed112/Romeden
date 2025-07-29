@@ -20,3 +20,6 @@ Thumbs.db
 .supabase/
 .vscode/
 .idea/
+.env.local.backup
+*.backup
+.env*
