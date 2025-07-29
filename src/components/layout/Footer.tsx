@@ -1,6 +1,18 @@
 import React from 'react';
+import { Instagram, Facebook, Music2 } from 'lucide-react';
+import { useContactSettings } from '../../hooks/useContactSettings';
 
 const Footer: React.FC = () => {
+  // ✅ NOUVEAU: Utiliser les settings configurables
+  const contactSettings = useContactSettings();
+
+  // ✅ FONCTION: Gérer les clics sur réseaux sociaux
+  const handleSocialClick = (url: string) => {
+    if (url && url.trim() !== '') {
+      window.open(url, '_blank');
+    }
+  };
+
   return (
     <footer className="bg-slate-50 border-t border-slate-200 py-12 lg:py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -38,34 +50,64 @@ const Footer: React.FC = () => {
               chaque moment précieux avec amour et créativité.
             </p>
             
+            {/* ✅ NOUVEAU: Réseaux sociaux avec vraies icônes */}
             <div className="flex space-x-4">
-              <a href="#" className="w-10 h-10 bg-gradient-to-br from-pink-100 to-rose-100 rounded-full flex items-center justify-center hover:scale-110 transition-transform duration-300">
-                <span className="text-rose-500 text-lg">📷</span>
-              </a>
-              <a href="#" className="w-10 h-10 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center hover:scale-110 transition-transform duration-300">
-                <span className="text-blue-500 text-lg">📘</span>
-              </a>
-              <a href="#" className="w-10 h-10 bg-gradient-to-br from-pink-100 to-purple-100 rounded-full flex items-center justify-center hover:scale-110 transition-transform duration-300">
-                <span className="text-purple-500 text-lg">📌</span>
-              </a>
+              <button
+                onClick={() => handleSocialClick(contactSettings.reseauxSociaux.instagram)}
+                className={`w-10 h-10 bg-gradient-to-br from-pink-100 to-rose-100 rounded-full flex items-center justify-center transition-all duration-300 ${
+                  contactSettings.reseauxSociaux.instagram 
+                    ? 'hover:scale-110 cursor-pointer hover:shadow-lg' 
+                    : 'opacity-50 cursor-not-allowed'
+                }`}
+                disabled={!contactSettings.reseauxSociaux.instagram}
+                title="Instagram"
+              >
+                <Instagram className="w-4 h-4 text-rose-500" />
+              </button>
+              
+              <button
+                onClick={() => handleSocialClick(contactSettings.reseauxSociaux.facebook)}
+                className={`w-10 h-10 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center transition-all duration-300 ${
+                  contactSettings.reseauxSociaux.facebook 
+                    ? 'hover:scale-110 cursor-pointer hover:shadow-lg' 
+                    : 'opacity-50 cursor-not-allowed'
+                }`}
+                disabled={!contactSettings.reseauxSociaux.facebook}
+                title="Facebook"
+              >
+                <Facebook className="w-4 h-4 text-blue-500" />
+              </button>
+              
+              <button
+                onClick={() => handleSocialClick(contactSettings.reseauxSociaux.tiktok)}
+                className={`w-10 h-10 bg-gradient-to-br from-red-100 to-pink-100 rounded-full flex items-center justify-center transition-all duration-300 ${
+                  contactSettings.reseauxSociaux.tiktok 
+                    ? 'hover:scale-110 cursor-pointer hover:shadow-lg' 
+                    : 'opacity-50 cursor-not-allowed'
+                }`}
+                disabled={!contactSettings.reseauxSociaux.tiktok}
+                title="TikTok"
+              >
+                <Music2 className="w-4 h-4 text-red-500" />
+              </button>
             </div>
           </div>
           
-          {/* Contact */}
+          {/* ✅ NOUVEAU: Contact avec données dynamiques */}
           <div>
             <h4 className="text-lg font-semibold text-slate-800 mb-4">Contact</h4>
             <div className="space-y-3 text-slate-600">
               <div className="flex items-center space-x-3">
                 <span className="text-amber-500">📧</span>
-                <span className="text-sm">hello@romeden-events.fr</span>
+                <span className="text-sm">{contactSettings.email}</span>
               </div>
               <div className="flex items-center space-x-3">
                 <span className="text-amber-500">📱</span>
-                <span className="text-sm">06 XX XX XX XX</span>
+                <span className="text-sm">{contactSettings.telephone}</span>
               </div>
               <div className="flex items-center space-x-3">
                 <span className="text-amber-500">📍</span>
-                <span className="text-sm">Région Parisienne</span>
+                <span className="text-sm">{contactSettings.zoneIntervention}</span>
               </div>
             </div>
           </div>
@@ -86,7 +128,7 @@ const Footer: React.FC = () => {
         <div className="border-t border-slate-200 mt-12 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <p className="text-sm text-slate-500">
-              © 2024 RomEden Events - Créations magiques pour moments inoubliables
+              © {new Date().getFullYear()} RomEden Events - Créations magiques pour moments inoubliables
             </p>
             <div className="flex items-center space-x-6 text-sm text-slate-500">
               <span className="hover:text-amber-600 transition-colors cursor-pointer">Mentions légales</span>

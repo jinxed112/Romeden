@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { Instagram, Facebook, Music2, Mail, Phone, MapPin } from 'lucide-react';
+import { useContactSettings } from '../../hooks/useContactSettings';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -23,6 +26,10 @@ const Contact: React.FC = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const navigate = useNavigate();
+
+  // ✅ NOUVEAU: Utiliser les settings configurables
+  const contactSettings = useContactSettings();
 
   const sectionRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLDivElement>(null);
@@ -96,6 +103,13 @@ const Contact: React.FC = () => {
     { value: 'autre', label: '✨ Autre' }
   ];
 
+  // ✅ FONCTION: Gérer les clics sur réseaux sociaux
+  const handleSocialClick = (url: string) => {
+    if (url && url.trim() !== '') {
+      window.open(url, '_blank');
+    }
+  };
+
   return (
     <section 
       ref={sectionRef}
@@ -156,58 +170,87 @@ const Contact: React.FC = () => {
                 <p className="text-slate-600 mb-4">
                   Estimez rapidement le budget de votre événement avec notre simulateur en ligne.
                 </p>
-                <button className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-3 rounded-xl font-medium hover:from-amber-600 hover:to-orange-600 transition-all duration-300">
+                <button
+                  onClick={() => navigate("/devis")}
+                  className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-3 rounded-xl font-medium hover:from-amber-600 hover:to-orange-600 transition-all duration-300 transform hover:scale-105 shadow-lg"
+                >
                   Accéder au simulateur
                 </button>
               </div>
             </div>
 
-            {/* Moyens de contact */}
+            {/* ✅ NOUVEAU: Moyens de contact dynamiques */}
             <div className="space-y-6">
               <div className="flex items-center space-x-4 p-4 bg-white rounded-xl shadow-sm border border-slate-100">
                 <div className="w-12 h-12 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full flex items-center justify-center">
-                  <span className="text-amber-600 text-xl">📧</span>
+                  <Mail className="w-5 h-5 text-amber-600" />
                 </div>
                 <div>
                   <div className="font-medium text-slate-800">Email</div>
-                  <div className="text-slate-600">hello@romeden-events.fr</div>
+                  <div className="text-slate-600">{contactSettings.email}</div>
                 </div>
               </div>
 
               <div className="flex items-center space-x-4 p-4 bg-white rounded-xl shadow-sm border border-slate-100">
                 <div className="w-12 h-12 bg-gradient-to-br from-pink-100 to-rose-100 rounded-full flex items-center justify-center">
-                  <span className="text-pink-600 text-xl">📱</span>
+                  <Phone className="w-5 h-5 text-pink-600" />
                 </div>
                 <div>
                   <div className="font-medium text-slate-800">Téléphone</div>
-                  <div className="text-slate-600">06 XX XX XX XX</div>
+                  <div className="text-slate-600">{contactSettings.telephone}</div>
                 </div>
               </div>
 
               <div className="flex items-center space-x-4 p-4 bg-white rounded-xl shadow-sm border border-slate-100">
                 <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-full flex items-center justify-center">
-                  <span className="text-purple-600 text-xl">📍</span>
+                  <MapPin className="w-5 h-5 text-purple-600" />
                 </div>
                 <div>
                   <div className="font-medium text-slate-800">Zone d'intervention</div>
-                  <div className="text-slate-600">Région Parisienne et alentours</div>
+                  <div className="text-slate-600">{contactSettings.zoneIntervention}</div>
                 </div>
               </div>
             </div>
 
-            {/* Réseaux sociaux */}
+            {/* ✅ NOUVEAU: Réseaux sociaux avec vraies icônes */}
             <div className="pt-6 border-t border-slate-200">
               <div className="text-sm font-medium text-slate-800 mb-4">Suivez mes créations</div>
               <div className="flex space-x-4">
-                <a href="#" className="w-12 h-12 bg-gradient-to-br from-pink-100 to-rose-100 rounded-xl flex items-center justify-center hover:scale-110 transition-transform duration-300 shadow-md">
-                  <span className="text-rose-500 text-xl">📷</span>
-                </a>
-                <a href="#" className="w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl flex items-center justify-center hover:scale-110 transition-transform duration-300 shadow-md">
-                  <span className="text-blue-500 text-xl">📘</span>
-                </a>
-                <a href="#" className="w-12 h-12 bg-gradient-to-br from-red-100 to-pink-100 rounded-xl flex items-center justify-center hover:scale-110 transition-transform duration-300 shadow-md">
-                  <span className="text-red-500 text-xl">📌</span>
-                </a>
+                <button
+                  onClick={() => handleSocialClick(contactSettings.reseauxSociaux.instagram)}
+                  className={`w-12 h-12 bg-gradient-to-br from-pink-100 to-rose-100 rounded-xl flex items-center justify-center transition-all duration-300 shadow-md ${
+                    contactSettings.reseauxSociaux.instagram 
+                      ? 'hover:scale-110 cursor-pointer hover:shadow-lg' 
+                      : 'opacity-50 cursor-not-allowed'
+                  }`}
+                  disabled={!contactSettings.reseauxSociaux.instagram}
+                >
+                  <Instagram className="w-5 h-5 text-rose-500" />
+                </button>
+                
+                <button
+                  onClick={() => handleSocialClick(contactSettings.reseauxSociaux.facebook)}
+                  className={`w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl flex items-center justify-center transition-all duration-300 shadow-md ${
+                    contactSettings.reseauxSociaux.facebook 
+                      ? 'hover:scale-110 cursor-pointer hover:shadow-lg' 
+                      : 'opacity-50 cursor-not-allowed'
+                  }`}
+                  disabled={!contactSettings.reseauxSociaux.facebook}
+                >
+                  <Facebook className="w-5 h-5 text-blue-500" />
+                </button>
+                
+                <button
+                  onClick={() => handleSocialClick(contactSettings.reseauxSociaux.tiktok)}
+                  className={`w-12 h-12 bg-gradient-to-br from-red-100 to-pink-100 rounded-xl flex items-center justify-center transition-all duration-300 shadow-md ${
+                    contactSettings.reseauxSociaux.tiktok 
+                      ? 'hover:scale-110 cursor-pointer hover:shadow-lg' 
+                      : 'opacity-50 cursor-not-allowed'
+                  }`}
+                  disabled={!contactSettings.reseauxSociaux.tiktok}
+                >
+                  <Music2 className="w-5 h-5 text-red-500" />
+                </button>
               </div>
             </div>
           </div>
@@ -321,7 +364,7 @@ const Contact: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-4 px-6 rounded-xl font-semibold hover:from-amber-600 hover:to-orange-600 focus:ring-4 focus:ring-amber-200 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-4 px-6 rounded-xl font-semibold hover:from-amber-600 hover:to-orange-600 focus:ring-4 focus:ring-amber-200 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 shadow-lg hover:shadow-xl"
                 >
                   {isSubmitting ? (
                     <div className="flex items-center justify-center space-x-2">

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useContactSettings } from '../../hooks/useContactSettings';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -8,6 +9,9 @@ const About: React.FC = () => {
   const sectionRef = useRef<HTMLDivElement>(null);
   const balloonsRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
+
+  // ✅ NOUVEAU: Utiliser les settings pour l'année de création
+  const contactSettings = useContactSettings();
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -102,7 +106,7 @@ const About: React.FC = () => {
               </p>
             </div>
 
-            {/* Stats */}
+            {/* ✅ NOUVEAU: Stats avec année dynamique */}
             <div className="flex items-center space-x-12 pt-8 border-t border-slate-100">
               <div>
                 <div className="text-3xl font-light text-amber-600">50+</div>
@@ -113,7 +117,7 @@ const About: React.FC = () => {
                 <div className="text-sm text-slate-500 uppercase tracking-wide">Satisfaction</div>
               </div>
               <div>
-                <div className="text-3xl font-light text-slate-600">2021</div>
+                <div className="text-3xl font-light text-slate-600">{contactSettings.anneeCreation}</div>
                 <div className="text-sm text-slate-500 uppercase tracking-wide">Depuis</div>
               </div>
             </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Star, ArrowRight, Play, Instagram, Music2 } from 'lucide-react';
+import { Star, ArrowRight, Instagram, Music2 } from 'lucide-react';
 import { gsap } from 'gsap';
 import { useGallery, GalleryImage } from "../../hooks/useGallery";
 

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 
 const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('accueil');
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -167,7 +169,7 @@ const Navbar: React.FC = () => {
 
           <div className="hidden lg:block">
             <button
-              onClick={() => scrollToSection('contact')}
+              onClick={() => navigate("/devis")}
               className="bg-gradient-to-r from-peach-400 to-coral-500 text-white px-6 py-2.5 rounded-full font-medium text-sm hover:shadow-lg hover:scale-105 transition-all duration-300 shadow-md"
             >
               Demander un devis
@@ -215,7 +217,7 @@ const Navbar: React.FC = () => {
             ))}
             <div className="pt-4 border-t border-gray-200">
               <button
-                onClick={() => scrollToSection('contact')}
+                onClick={() => navigate("/devis")}
                 className="w-full bg-gradient-to-r from-peach-400 to-coral-500 text-white px-6 py-3 rounded-full font-medium text-lg hover:shadow-lg transition-all duration-300"
               >
                 Demander un devis

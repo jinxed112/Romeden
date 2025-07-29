@@ -1,5 +1,17 @@
 import React, { useState, useEffect } from 'react';
 
+interface InformationsContact {
+  email: string;
+  telephone: string;
+  zoneIntervention: string;
+  anneeCreation: number;
+  reseauxSociaux: {
+    instagram: string;
+    facebook: string;
+    tiktok: string;
+  };
+}
+
 interface ParametresCalendrier {
   majorations: {
     weekend: number;
@@ -22,6 +34,7 @@ interface ParametresCalendrier {
     nouveauxDevis: boolean;
     rappelsEvenements: boolean;
   };
+  contact: InformationsContact;
 }
 
 const SettingsView: React.FC = () => {
@@ -38,6 +51,17 @@ const SettingsView: React.FC = () => {
     notifications: {
       nouveauxDevis: true,
       rappelsEvenements: true
+    },
+    contact: {
+      email: "hello@romeden-events.fr",
+      telephone: "06 XX XX XX XX",
+      zoneIntervention: "Région Parisienne et alentours",
+      anneeCreation: 2025,
+      reseauxSociaux: {
+        instagram: "https://www.instagram.com/romeden_events/?igsh=N3lrNGxiODJvOWhw#",
+        facebook: "",
+        tiktok: "https://www.tiktok.com/@romeden.events?_t=ZG-8yPdr0plDlJ&_r=1"
+      }
     }
   });
 
@@ -64,10 +88,45 @@ const SettingsView: React.FC = () => {
   ];
 
   useEffect(() => {
-    // Charger les paramètres depuis localStorage
+    // Charger les paramètres depuis localStorage avec merge des valeurs par défaut
     const saved = localStorage.getItem('romeden_settings');
     if (saved) {
-      setParametres(JSON.parse(saved));
+      try {
+        const savedData = JSON.parse(saved);
+        // ✅ MERGER avec les valeurs par défaut pour gérer les anciens localStorage
+        const mergedData: ParametresCalendrier = {
+          majorations: savedData.majorations || {
+            weekend: 20,
+            feries: 30,
+            evenements: []
+          },
+          fermetures: savedData.fermetures || {
+            joursRecurrents: [],
+            periodesVacances: []
+          },
+          notifications: savedData.notifications || {
+            nouveauxDevis: true,
+            rappelsEvenements: true
+          },
+          contact: savedData.contact || {
+            email: "hello@romeden-events.fr",
+            telephone: "06 XX XX XX XX",
+            zoneIntervention: "Région Parisienne et alentours",
+            anneeCreation: 2025,
+            reseauxSociaux: {
+              instagram: "https://www.instagram.com/romeden_events/?igsh=N3lrNGxiODJvOWhw#",
+              facebook: "",
+              tiktok: "https://www.tiktok.com/@romeden.events?_t=ZG-8yPdr0plDlJ&_r=1"
+            }
+          }
+        };
+        setParametres(mergedData);
+        
+        // ✅ Sauvegarder la structure mise à jour
+        localStorage.setItem('romeden_settings', JSON.stringify(mergedData));
+      } catch (error) {
+        console.warn('Erreur lors du chargement des paramètres:', error);
+      }
     }
   }, []);
 
@@ -83,27 +142,25 @@ const SettingsView: React.FC = () => {
       return;
     }
 
-    const nouveauxParametres = {
-      ...parametres,
+    setParametres(prev => ({
+      ...prev,
       majorations: {
-        ...parametres.majorations,
-        evenements: [...parametres.majorations.evenements, { ...nouvelEvenement }]
+        ...prev.majorations,
+        evenements: [...prev.majorations.evenements, { ...nouvelEvenement }]
       }
-    };
+    }));
 
-    sauvegarderParametres(nouveauxParametres);
     setNouvelEvenement({ date: '', nom: '', majoration: 0 });
   };
 
   const supprimerEvenementSpecial = (index: number) => {
-    const nouveauxParametres = {
-      ...parametres,
+    setParametres(prev => ({
+      ...prev,
       majorations: {
-        ...parametres.majorations,
-        evenements: parametres.majorations.evenements.filter((_, i) => i !== index)
+        ...prev.majorations,
+        evenements: prev.majorations.evenements.filter((_, i) => i !== index)
       }
-    };
-    sauvegarderParametres(nouveauxParametres);
+    }));
   };
 
   const ajouterPeriodeVacances = () => {
@@ -112,27 +169,25 @@ const SettingsView: React.FC = () => {
       return;
     }
 
-    const nouveauxParametres = {
-      ...parametres,
+    setParametres(prev => ({
+      ...prev,
       fermetures: {
-        ...parametres.fermetures,
-        periodesVacances: [...parametres.fermetures.periodesVacances, { ...nouvellePeriode }]
+        ...prev.fermetures,
+        periodesVacances: [...prev.fermetures.periodesVacances, { ...nouvellePeriode }]
       }
-    };
+    }));
 
-    sauvegarderParametres(nouveauxParametres);
     setNouvellePeriode({ debut: '', fin: '', motif: '' });
   };
 
   const supprimerPeriodeVacances = (index: number) => {
-    const nouveauxParametres = {
-      ...parametres,
+    setParametres(prev => ({
+      ...prev,
       fermetures: {
-        ...parametres.fermetures,
-        periodesVacances: parametres.fermetures.periodesVacances.filter((_, i) => i !== index)
+        ...prev.fermetures,
+        periodesVacances: prev.fermetures.periodesVacances.filter((_, i) => i !== index)
       }
-    };
-    sauvegarderParametres(nouveauxParametres);
+    }));
   };
 
   const toggleJourRecurrent = (jour: string) => {
@@ -140,25 +195,62 @@ const SettingsView: React.FC = () => {
       ? parametres.fermetures.joursRecurrents.filter(j => j !== jour)
       : [...parametres.fermetures.joursRecurrents, jour];
 
-    const nouveauxParametres = {
-      ...parametres,
+    setParametres(prev => ({
+      ...prev,
       fermetures: {
-        ...parametres.fermetures,
+        ...prev.fermetures,
         joursRecurrents: nouveauxJours
       }
-    };
-    sauvegarderParametres(nouveauxParametres);
+    }));
   };
 
   const updateMajoration = (type: 'weekend' | 'feries', valeur: number) => {
-    const nouveauxParametres = {
-      ...parametres,
+    setParametres(prev => ({
+      ...prev,
       majorations: {
-        ...parametres.majorations,
+        ...prev.majorations,
         [type]: valeur
       }
-    };
-    sauvegarderParametres(nouveauxParametres);
+    }));
+  };
+
+  const updateContact = (field: keyof InformationsContact, value: any) => {
+    setParametres(prev => ({
+      ...prev,
+      contact: {
+        ...prev.contact,
+        [field]: value
+      }
+    }));
+  };
+
+  const updateReseauSocial = (reseau: keyof InformationsContact['reseauxSociaux'], url: string) => {
+    setParametres(prev => ({
+      ...prev,
+      contact: {
+        ...prev.contact,
+        reseauxSociaux: {
+          ...prev.contact.reseauxSociaux,
+          [reseau]: url
+        }
+      }
+    }));
+  };
+
+  const sauvegarderContact = () => {
+    sauvegarderParametres(parametres);
+  };
+
+  const sauvegarderMajorations = () => {
+    sauvegarderParametres(parametres);
+  };
+
+  const sauvegarderFermetures = () => {
+    sauvegarderParametres(parametres);
+  };
+
+  const sauvegarderNotifications = () => {
+    sauvegarderParametres(parametres);
   };
 
   const formatDate = (dateStr: string) => {
@@ -170,7 +262,153 @@ const SettingsView: React.FC = () => {
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-gray-800">⚙️ Paramètres</h2>
-        <p className="text-gray-600">Configuration de votre calendrier et tarification</p>
+        <p className="text-gray-600">Configuration de votre calendrier et informations de contact</p>
+      </div>
+
+      {/* Informations de contact */}
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <h3 className="text-xl font-semibold text-gray-800 mb-6">📞 Informations de contact</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <label className="block text-sm font-medium text-blue-800 mb-2">
+              📧 Email
+            </label>
+            <input
+              type="email"
+              value={parametres.contact.email}
+              onChange={(e) => updateContact('email', e.target.value)}
+              className="w-full px-3 py-2 border border-blue-200 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200"
+              placeholder="votre@email.fr"
+            />
+          </div>
+
+        {/* Bouton sauvegarder notifications */}
+        <div className="border-t pt-6 mt-6">
+          <button
+            onClick={sauvegarderNotifications}
+            className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg"
+          >
+            💾 Sauvegarder les notifications
+          </button>
+        </div>
+
+          <div className="bg-green-50 p-4 rounded-lg">
+            <label className="block text-sm font-medium text-green-800 mb-2">
+              📱 Téléphone
+            </label>
+            <input
+              type="tel"
+              value={parametres.contact.telephone}
+              onChange={(e) => updateContact('telephone', e.target.value)}
+              className="w-full px-3 py-2 border border-green-200 rounded-lg focus:border-green-400 focus:ring-2 focus:ring-green-200"
+              placeholder="06 XX XX XX XX"
+            />
+          </div>
+
+          <div className="bg-purple-50 p-4 rounded-lg">
+            <label className="block text-sm font-medium text-purple-800 mb-2">
+              📍 Zone d'intervention
+            </label>
+            <input
+              type="text"
+              value={parametres.contact.zoneIntervention}
+              onChange={(e) => updateContact('zoneIntervention', e.target.value)}
+              className="w-full px-3 py-2 border border-purple-200 rounded-lg focus:border-purple-400 focus:ring-2 focus:ring-purple-200"
+              placeholder="Région, ville..."
+            />
+          </div>
+
+          <div className="bg-amber-50 p-4 rounded-lg">
+            <label className="block text-sm font-medium text-amber-800 mb-2">
+              📅 Année de création
+            </label>
+            <input
+              type="number"
+              value={parametres.contact.anneeCreation}
+              onChange={(e) => updateContact('anneeCreation', Number(e.target.value))}
+              className="w-full px-3 py-2 border border-amber-200 rounded-lg focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+              min="2000"
+              max="2030"
+            />
+          </div>
+        </div>
+
+        {/* Bouton sauvegarder fermetures */}
+        <div className="border-t pt-6 mt-6">
+          <button
+            onClick={sauvegarderFermetures}
+            className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg"
+          >
+            💾 Sauvegarder les fermetures
+          </button>
+        </div>
+
+        {/* Bouton sauvegarder majorations */}
+        <div className="border-t pt-6 mt-6">
+          <button
+            onClick={sauvegarderMajorations}
+            className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg"
+          >
+            💾 Sauvegarder les majorations
+          </button>
+        </div>
+
+        {/* Réseaux sociaux */}
+        <div className="border-t pt-6 mt-6">
+          <h4 className="font-semibold text-gray-700 mb-4">🌐 Réseaux sociaux</h4>
+          
+          <div className="space-y-4">
+            <div className="bg-pink-50 p-4 rounded-lg">
+              <label className="block text-sm font-medium text-pink-800 mb-2">
+                📷 Instagram
+              </label>
+              <input
+                type="url"
+                value={parametres.contact.reseauxSociaux.instagram}
+                onChange={(e) => updateReseauSocial('instagram', e.target.value)}
+                className="w-full px-3 py-2 border border-pink-200 rounded-lg focus:border-pink-400"
+                placeholder="https://instagram.com/votre_compte"
+              />
+            </div>
+
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <label className="block text-sm font-medium text-blue-800 mb-2">
+                📘 Facebook
+              </label>
+              <input
+                type="url"
+                value={parametres.contact.reseauxSociaux.facebook}
+                onChange={(e) => updateReseauSocial('facebook', e.target.value)}
+                className="w-full px-3 py-2 border border-blue-200 rounded-lg focus:border-blue-400"
+                placeholder="https://facebook.com/votre_page"
+              />
+            </div>
+
+            <div className="bg-red-50 p-4 rounded-lg">
+              <label className="block text-sm font-medium text-red-800 mb-2">
+                🎵 TikTok
+              </label>
+              <input
+                type="url"
+                value={parametres.contact.reseauxSociaux.tiktok}
+                onChange={(e) => updateReseauSocial('tiktok', e.target.value)}
+                className="w-full px-3 py-2 border border-red-200 rounded-lg focus:border-red-400"
+                placeholder="https://tiktok.com/@votre_compte"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Bouton sauvegarder contact */}
+        <div className="border-t pt-6 mt-6">
+          <button
+            onClick={sauvegarderContact}
+            className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg"
+          >
+            💾 Sauvegarder les informations de contact
+          </button>
+        </div>
       </div>
 
       {/* Majorations */}
@@ -368,14 +606,13 @@ const SettingsView: React.FC = () => {
             </div>
             <button
               onClick={() => {
-                const nouveauxParametres = {
-                  ...parametres,
+                setParametres(prev => ({
+                  ...prev,
                   notifications: {
-                    ...parametres.notifications,
-                    nouveauxDevis: !parametres.notifications.nouveauxDevis
+                    ...prev.notifications,
+                    nouveauxDevis: !prev.notifications.nouveauxDevis
                   }
-                };
-                sauvegarderParametres(nouveauxParametres);
+                }));
               }}
               className={`w-12 h-6 rounded-full transition-colors ${
                 parametres.notifications.nouveauxDevis ? 'bg-green-500' : 'bg-gray-300'
@@ -394,14 +631,13 @@ const SettingsView: React.FC = () => {
             </div>
             <button
               onClick={() => {
-                const nouveauxParametres = {
-                  ...parametres,
+                setParametres(prev => ({
+                  ...prev,
                   notifications: {
-                    ...parametres.notifications,
-                    rappelsEvenements: !parametres.notifications.rappelsEvenements
+                    ...prev.notifications,
+                    rappelsEvenements: !prev.notifications.rappelsEvenements
                   }
-                };
-                sauvegarderParametres(nouveauxParametres);
+                }));
               }}
               className={`w-12 h-6 rounded-full transition-colors ${
                 parametres.notifications.rappelsEvenements ? 'bg-green-500' : 'bg-gray-300'
@@ -425,7 +661,18 @@ const SettingsView: React.FC = () => {
                 const parametresDefaut: ParametresCalendrier = {
                   majorations: { weekend: 20, feries: 30, evenements: [] },
                   fermetures: { joursRecurrents: [], periodesVacances: [] },
-                  notifications: { nouveauxDevis: true, rappelsEvenements: true }
+                  notifications: { nouveauxDevis: true, rappelsEvenements: true },
+                  contact: {
+                    email: "hello@romeden-events.fr",
+                    telephone: "06 XX XX XX XX",
+                    zoneIntervention: "Région Parisienne et alentours",
+                    anneeCreation: 2025,
+                    reseauxSociaux: {
+                      instagram: "https://www.instagram.com/romeden_events/?igsh=N3lrNGxiODJvOWhw#",
+                      facebook: "",
+                      tiktok: "https://www.tiktok.com/@romeden.events?_t=ZG-8yPdr0plDlJ&_r=1"
+                    }
+                  }
                 };
                 sauvegarderParametres(parametresDefaut);
               }

@@ -1,6 +1,8 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const Services: React.FC = () => {
+  const navigate = useNavigate();
   return (
     <section 
       className="relative py-16 lg:py-24 bg-white"
@@ -41,7 +43,9 @@ const Services: React.FC = () => {
           </div>
           
           <div className="mt-12">
-            <button className="bg-gradient-to-r from-pink-500 to-yellow-500 text-white px-8 py-4 rounded-full font-semibold hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+            <button
+              onClick={() => navigate("/galerie")}
+              className="bg-gradient-to-r from-pink-500 to-yellow-500 text-white px-8 py-4 rounded-full font-semibold hover:shadow-lg transition-all duration-300 transform hover:scale-105">
               Découvrir toutes mes créations
             </button>
           </div>
