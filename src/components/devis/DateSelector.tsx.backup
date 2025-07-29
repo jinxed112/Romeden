@@ -1,0 +1,310 @@
+import React, { useState, useEffect } from 'react';
+import Calendar from 'react-calendar';
+import 'react-calendar/dist/Calendar.css';
+
+interface DisponibiliteJour {
+  date: string;
+  statut: 'disponible' | 'indisponible' | 'bloque' | 'reserve';
+  majoration?: number;
+  motif?: string;
+}
+
+interface ParametresCalendrier {
+  majorations: {
+    weekend: number;
+    feries: number;
+    evenements: Array<{
+      date: string;
+      nom: string;
+      majoration: number;
+    }>;
+  };
+  fermetures: {
+    joursRecurrents: string[];
+    periodesVacances: Array<{
+      debut: string;
+      fin: string;
+      motif: string;
+    }>;
+  };
+}
+
+interface DateSelectorProps {
+  onDateSelect: (date: string, majoration: number) => void;
+  selectedDate: string;
+}
+
+const DateSelector: React.FC<DateSelectorProps> = ({ onDateSelect, selectedDate }) => {
+  const [disponibilites, setDisponibilites] = useState<DisponibiliteJour[]>([]);
+  const [parametres, setParametres] = useState<ParametresCalendrier | null>(null);
+  const [dateInfo, setDateInfo] = useState<string>('');
+
+  useEffect(() => {
+    // Charger les disponibilités du calendrier admin
+    const savedDisponibilites = localStorage.getItem('romeden_disponibilites');
+    if (savedDisponibilites) {
+      setDisponibilites(JSON.parse(savedDisponibilites));
+    }
+
+    // Charger les paramètres
+    const savedParametres = localStorage.getItem('romeden_settings');
+    if (savedParametres) {
+      setParametres(JSON.parse(savedParametres));
+    } else {
+      // Paramètres par défaut
+      setParametres({
+        majorations: { weekend: 20, feries: 30, evenements: [] },
+        fermetures: { joursRecurrents: [], periodesVacances: [] }
+      });
+    }
+  }, []);
+
+  const getJourSemaine = (date: Date): string => {
+    const jours = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+    return jours[date.getDay()];
+  };
+
+  const isWeekend = (date: Date): boolean => {
+    return date.getDay() === 0 || date.getDay() === 6; // dimanche ou samedi
+  };
+
+  const isJourFerie = (date: Date): boolean => {
+    const dateStr = date.toISOString().split('T')[0];
+    // Jours fériés fixes 2025
+    const joursFeries = [
+      '2025-01-01', // Nouvel An
+      '2025-05-01', // Fête du travail
+      '2025-05-08', // Victoire 1945
+      '2025-07-14', // Fête nationale
+      '2025-08-15', // Assomption
+      '2025-11-01', // Toussaint
+      '2025-11-11', // Armistice
+      '2025-12-25', // Noël
+      // Ajouter les dates mobiles si besoin (Pâques, etc.)
+    ];
+    return joursFeries.includes(dateStr);
+  };
+
+  const isJourFerme = (date: Date): boolean => {
+    if (!parametres) return false;
+
+    const jour = getJourSemaine(date);
+    
+    // Vérifier fermeture hebdomadaire
+    if (parametres.fermetures.joursRecurrents.includes(jour)) {
+      return true;
+    }
+
+    // Vérifier périodes de vacances
+    const dateStr = date.toISOString().split('T')[0];
+    return parametres.fermetures.periodesVacances.some(periode => 
+      dateStr >= periode.debut && dateStr <= periode.fin
+    );
+  };
+
+  const calculerMajoration = (date: Date): number => {
+    if (!parametres) return 0;
+
+    let majoration = 0;
+    const dateStr = date.toISOString().split('T')[0];
+
+    // Majoration weekend
+    if (isWeekend(date)) {
+      majoration = Math.max(majoration, parametres.majorations.weekend);
+    }
+
+    // Majoration jour férié
+    if (isJourFerie(date)) {
+      majoration = Math.max(majoration, parametres.majorations.feries);
+    }
+
+    // Événements spéciaux
+    const evenementSpecial = parametres.majorations.evenements.find(evt => evt.date === dateStr);
+    if (evenementSpecial) {
+      majoration = Math.max(majoration, evenementSpecial.majoration);
+    }
+
+    // Majoration personnalisée du calendrier admin
+    const disponibilite = disponibilites.find(d => d.date === dateStr);
+    if (disponibilite && disponibilite.majoration) {
+      majoration = Math.max(majoration, disponibilite.majoration);
+    }
+
+    return majoration;
+  };
+
+  const getStatutDate = (date: Date): 'disponible' | 'indisponible' | 'bloque' | 'reserve' => {
+    const dateStr = date.toISOString().split('T')[0];
+    
+    // Dates passées = indisponibles
+    if (date < new Date()) {
+      return 'indisponible';
+    }
+
+    // Jours fermés = indisponibles
+    if (isJourFerme(date)) {
+      return 'indisponible';
+    }
+
+    // Vérifier dans le calendrier admin
+    const disponibilite = disponibilites.find(d => d.date === dateStr);
+    if (disponibilite) {
+      return disponibilite.statut;
+    }
+
+    // Par défaut : indisponible (sécurité - Mélissa doit valider chaque date)
+    return 'indisponible';
+  };
+
+  const tileClassName = ({ date }: { date: Date }) => {
+    const statut = getStatutDate(date);
+    const dateStr = date.toISOString().split('T')[0];
+    
+    let classes = 'relative ';
+    
+    switch (statut) {
+      case 'disponible':
+        classes += 'bg-green-100 text-green-800 hover:bg-green-200 cursor-pointer';
+        break;
+      case 'reserve':
+        classes += 'bg-blue-100 text-blue-800 cursor-not-allowed';
+        break;
+      case 'bloque':
+        classes += 'bg-gray-100 text-gray-600 cursor-not-allowed';
+        break;
+      default:
+        classes += 'bg-red-50 text-red-400 cursor-not-allowed';
+    }
+
+    if (selectedDate === dateStr) {
+      classes += ' ring-2 ring-rose-400 ring-offset-1';
+    }
+
+    return classes;
+  };
+
+  const tileDisabled = ({ date }: { date: Date }) => {
+    const statut = getStatutDate(date);
+    return statut !== 'disponible';
+  };
+
+  const onClickDay = (date: Date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    const statut = getStatutDate(date);
+    
+    if (statut === 'disponible') {
+      const majoration = calculerMajoration(date);
+      onDateSelect(dateStr, majoration);
+      
+      // Afficher info sur la date
+      let info = `📅 ${date.toLocaleDateString('fr-FR', { 
+        weekday: 'long', 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+      })}`;
+      
+      if (majoration > 0) {
+        info += ` • Majoration: +${majoration}%`;
+        
+        if (isWeekend(date)) info += ' (weekend)';
+        if (isJourFerie(date)) info += ' (jour férié)';
+        
+        const evenementSpecial = parametres?.majorations.evenements.find(evt => evt.date === dateStr);
+        if (evenementSpecial) info += ` (${evenementSpecial.nom})`;
+      }
+      
+      setDateInfo(info);
+    }
+  };
+
+  const tileContent = ({ date }: { date: Date }) => {
+    const majoration = calculerMajoration(date);
+    const statut = getStatutDate(date);
+    
+    return (
+      <div className="absolute inset-0 flex items-center justify-center">
+        {majoration > 0 && statut === 'disponible' && (
+          <div className="absolute -top-1 -right-1 bg-amber-400 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+            +{majoration}%
+          </div>
+        )}
+        {statut === 'reserve' && (
+          <div className="absolute -top-1 -right-1 text-blue-600 text-xs">📋</div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-xl font-semibold text-gray-800 mb-4">📅 Sélectionnez votre date</h3>
+        
+        {/* Légende */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 text-sm">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-green-100 border border-green-300 rounded"></div>
+            <span>Disponible</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-blue-100 border border-blue-300 rounded"></div>
+            <span>Réservé</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-gray-100 border border-gray-300 rounded"></div>
+            <span>Bloqué</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-red-50 border border-red-200 rounded"></div>
+            <span>Indisponible</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Calendrier */}
+      <div className="bg-white p-6 rounded-xl shadow-lg">
+        <Calendar
+          onClickDay={onClickDay}
+          tileClassName={tileClassName}
+          tileDisabled={tileDisabled}
+          tileContent={tileContent}
+          locale="fr-FR"
+          minDate={new Date()}
+          className="w-full"
+        />
+      </div>
+
+      {/* Info date sélectionnée */}
+      {dateInfo && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <div className="text-green-600 text-xl">✅</div>
+            <div>
+              <div className="font-semibold text-green-800">Date sélectionnée</div>
+              <div className="text-green-700">{dateInfo}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Instructions */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <div className="text-blue-600 text-xl">ℹ️</div>
+          <div className="text-sm text-blue-800">
+            <div className="font-semibold mb-1">Comment ça marche :</div>
+            <ul className="space-y-1">
+              <li>• Seules les dates <span className="font-semibold text-green-700">vertes</span> sont disponibles à la réservation</li>
+              <li>• Les majorations (weekend, jours fériés) sont automatiquement appliquées</li>
+              <li>• Les dates avec <span className="bg-amber-400 text-white px-1 rounded">+%</span> ont une majoration tarifaire</li>
+              <li>• Les dates grises sont bloquées par l'administrateur</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default DateSelector;

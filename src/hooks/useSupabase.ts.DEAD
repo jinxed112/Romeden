@@ -1,0 +1,13 @@
+// HOOK DÉSACTIVÉ
+export const useSupabase = () => {
+  console.log('useSupabase DÉSACTIVÉ');
+  return {
+    data: [],
+    loading: false,
+    error: null,
+    fetchAll: () => Promise.resolve(),
+    create: () => Promise.resolve(),
+    update: () => Promise.resolve(),
+    remove: () => Promise.resolve()
+  };
+};

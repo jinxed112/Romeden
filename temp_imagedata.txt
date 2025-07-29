@@ -1,0 +1,11 @@
+      const imageData: Omit<GalleryImage, 'id'> = {
+        src: publicUrl,
+        title: file.name.replace(/\.[^/.]+$/, ""),
+        category: 'anniversaires',
+        alt: file.name,
+        date_ajout: new Date().toISOString(),
+        order_num: images.length,
+        is_portfolio: false,
+        tags: [],
+        filename: file.name
+      };

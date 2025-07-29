@@ -1,0 +1,501 @@
+import React, { useState, useEffect } from 'react';
+
+interface DevisEnAttente {
+  id: string;
+  client: {
+    nom: string;
+    email: string;
+    telephone: string;
+  };
+  date: string;
+  prestations: string[];
+  montant: number;
+  dateCreation: string;
+  statut: 'en_attente' | 'confirme' | 'refuse';
+}
+
+interface ModalDetailProps {
+  isOpen: boolean;
+  onClose: () => void;
+  devis: DevisEnAttente;
+  onAnnuler: (devisId: string) => void;
+  onDeplacer: (devisId: string, nouvelleDate: string) => void;
+}
+
+const ModalDetail: React.FC<ModalDetailProps> = ({ isOpen, onClose, devis, onAnnuler, onDeplacer }) => {
+  const [nouvelleDate, setNouvelleDate] = useState('');
+
+  if (!isOpen) return null;
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('fr-FR', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  };
+
+  const handleDeplacer = () => {
+    if (!nouvelleDate) {
+      alert('Veuillez sélectionner une nouvelle date');
+      return;
+    }
+    onDeplacer(devis.id, nouvelleDate);
+    setNouvelleDate('');
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-start mb-6">
+          <h3 className="text-2xl font-bold text-gray-800">📋 Détail réservation</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 text-2xl"
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Infos complètes */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div className="space-y-4">
+            <div>
+              <h4 className="font-semibold text-gray-700 mb-2">👤 Client</h4>
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <div className="font-bold text-lg">{devis.client.nom}</div>
+                <div className="text-gray-600">📧 {devis.client.email}</div>
+                <div className="text-gray-600 font-mono">📞 {devis.client.telephone}</div>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-gray-700 mb-2">📅 Date événement</h4>
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <div className="font-bold text-lg">{formatDate(devis.date)}</div>
+                <div className="text-sm text-gray-600">Réservé le {new Date(devis.dateCreation).toLocaleDateString('fr-FR')}</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <h4 className="font-semibold text-gray-700 mb-2">🎪 Prestations</h4>
+              <div className="bg-gray-50 p-3 rounded-lg">
+                {devis.prestations.map((prestation, index) => (
+                  <div key={index} className="flex items-center gap-2 mb-1">
+                    <span className="w-2 h-2 bg-rose-400 rounded-full"></span>
+                    <span>{prestation}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-gray-700 mb-2">💰 Montant</h4>
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <div className="text-2xl font-bold text-green-600">{devis.montant}€</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Actions pour devis confirmé */}
+        {devis.statut === 'confirme' && (
+          <div className="border-t pt-6">
+            <h4 className="font-semibold text-gray-700 mb-4">🛠️ Actions disponibles</h4>
+            
+            {/* Déplacer date */}
+            <div className="bg-blue-50 p-4 rounded-lg mb-4">
+              <h5 className="font-medium text-blue-800 mb-3">📅 Déplacer la réservation</h5>
+              <div className="flex gap-3">
+                <input
+                  type="date"
+                  value={nouvelleDate}
+                  onChange={(e) => setNouvelleDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="flex-1 px-3 py-2 border border-blue-200 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-200"
+                />
+                <button
+                  onClick={handleDeplacer}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  📅 Déplacer
+                </button>
+              </div>
+            </div>
+
+            {/* Annuler réservation */}
+            <div className="bg-red-50 p-4 rounded-lg">
+              <h5 className="font-medium text-red-800 mb-3">❌ Annuler la réservation</h5>
+              <p className="text-sm text-red-600 mb-3">
+                La date sera libérée dans le calendrier et le client devra faire une nouvelle demande.
+              </p>
+              <button
+                onClick={() => {
+                  if (window.confirm(`Êtes-vous sûre d'annuler la réservation de ${devis.client.nom} ?`)) {
+                    onAnnuler(devis.id);
+                    onClose();
+                  }
+                }}
+                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                ❌ Annuler définitivement
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Fermer */}
+        <div className="flex justify-end mt-6 pt-6 border-t">
+          <button
+            onClick={onClose}
+            className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors"
+          >
+            Fermer
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ReservationsView: React.FC = () => {
+  const [devis, setDevis] = useState<DevisEnAttente[]>([]);
+  const [modalDetail, setModalDetail] = useState<{isOpen: boolean, devis: DevisEnAttente | null}>({
+    isOpen: false,
+    devis: null
+  });
+
+  // Données simulées
+// Données simulées en dehors du composant pour éviter le warning useEffect
+const devisSimules: DevisEnAttente[] = [
+  {
+    id: "DEV-001",
+    client: { nom: "Marie Dubois", email: "marie.dubois@email.com", telephone: "06.12.34.56.78" },
+    date: "2025-08-15",
+    prestations: ["Anniversaire enfant", "Photobooth"],
+    montant: 280,
+    dateCreation: "2025-07-25",
+    statut: "en_attente"
+  },
+  {
+    id: "DEV-002", 
+    client: { nom: "Sophie Martin", email: "sophie.martin@email.com", telephone: "06.98.76.54.32" },
+    date: "2025-09-03",
+    prestations: ["Baby Shower", "Candy Bar"],
+    montant: 220,
+    dateCreation: "2025-07-26",
+    statut: "en_attente"
+  },
+  {
+    id: "DEV-003",
+    client: { nom: "Claire Durand", email: "claire.durand@email.com", telephone: "06.45.67.89.01" },
+    date: "2025-08-28",
+    prestations: ["Baptême", "Arche florale"],
+    montant: 350,
+    dateCreation: "2025-07-27",
+    statut: "en_attente"
+  }
+];
+
+  useEffect(() => {
+    const saved = localStorage.getItem('romeden_reservations');
+    if (saved) {
+      setDevis(JSON.parse(saved));
+    } else {
+      setDevis(devisSimules);
+      localStorage.setItem('romeden_reservations', JSON.stringify(devisSimules));
+    }
+  }, []);
+
+  const sauvegarderDevis = (nouveauxDevis: DevisEnAttente[]) => {
+    setDevis(nouveauxDevis);
+    localStorage.setItem('romeden_reservations', JSON.stringify(nouveauxDevis));
+  };
+
+  const confirmerDevis = (devisId: string) => {
+    const devisAConfirmer = devis.find(d => d.id === devisId);
+    if (!devisAConfirmer) return;
+
+    const nouveauxDevis = devis.map(d => 
+      d.id === devisId ? { ...d, statut: 'confirme' as const } : d
+    );
+    sauvegarderDevis(nouveauxDevis);
+
+    const disponibilites = JSON.parse(localStorage.getItem('romeden_disponibilites') || '[]');
+    const nouvellesDisponibilites = [...disponibilites];
+    
+    const dateIndex = nouvellesDisponibilites.findIndex(d => d.date === devisAConfirmer.date);
+    
+    if (dateIndex >= 0) {
+      nouvellesDisponibilites[dateIndex] = {
+        ...nouvellesDisponibilites[dateIndex],
+        statut: 'reserve',
+        motif: `Réservé - ${devisAConfirmer.client.nom}`
+      };
+    } else {
+      nouvellesDisponibilites.push({
+        date: devisAConfirmer.date,
+        statut: 'reserve',
+        majoration: 0,
+        motif: `Réservé - ${devisAConfirmer.client.nom}`
+      });
+    }
+
+    localStorage.setItem('romeden_disponibilites', JSON.stringify(nouvellesDisponibilites));
+    alert(`✅ Devis confirmé ! Contactez ${devisAConfirmer.client.nom} au ${devisAConfirmer.client.telephone}`);
+  };
+
+  const refuserDevis = (devisId: string) => {
+    const devisARefuser = devis.find(d => d.id === devisId);
+    if (!devisARefuser) return;
+
+    if (!window.confirm(`Êtes-vous sûre de refuser le devis de ${devisARefuser.client.nom} ?`)) {
+      return;
+    }
+
+    const nouveauxDevis = devis.map(d => 
+      d.id === devisId ? { ...d, statut: 'refuse' as const } : d
+    );
+    sauvegarderDevis(nouveauxDevis);
+
+    const disponibilites = JSON.parse(localStorage.getItem('romeden_disponibilites') || '[]');
+    const nouvellesDisponibilites = disponibilites.map((d: any) => 
+      d.date === devisARefuser.date && d.statut === 'reserve' 
+        ? { ...d, statut: 'disponible', motif: undefined }
+        : d
+    );
+
+    localStorage.setItem('romeden_disponibilites', JSON.stringify(nouvellesDisponibilites));
+    alert('❌ Devis refusé et date libérée dans le calendrier.');
+  };
+
+  const annulerReservation = (devisId: string) => {
+    const devisAAnnuler = devis.find(d => d.id === devisId);
+    if (!devisAAnnuler) return;
+
+    // Remettre le devis en attente
+    const nouveauxDevis = devis.map(d => 
+      d.id === devisId ? { ...d, statut: 'en_attente' as const } : d
+    );
+    sauvegarderDevis(nouveauxDevis);
+
+    // Libérer la date dans le calendrier
+    const disponibilites = JSON.parse(localStorage.getItem('romeden_disponibilites') || '[]');
+    const nouvellesDisponibilites = disponibilites.map((d: any) => 
+      d.date === devisAAnnuler.date && d.statut === 'reserve' 
+        ? { ...d, statut: 'disponible', motif: undefined }
+        : d
+    );
+
+    localStorage.setItem('romeden_disponibilites', JSON.stringify(nouvellesDisponibilites));
+    alert(`🔄 Réservation annulée. ${devisAAnnuler.client.nom} repassé en "en attente"`);
+  };
+
+  const deplacerReservation = (devisId: string, nouvelleDate: string) => {
+    const devisADeplacer = devis.find(d => d.id === devisId);
+    if (!devisADeplacer) return;
+
+    // Mettre à jour la date du devis
+    const nouveauxDevis = devis.map(d => 
+      d.id === devisId ? { ...d, date: nouvelleDate } : d
+    );
+    sauvegarderDevis(nouveauxDevis);
+
+    // Mettre à jour le calendrier
+    const disponibilites = JSON.parse(localStorage.getItem('romeden_disponibilites') || '[]');
+    let nouvellesDisponibilites = [...disponibilites];
+
+    // Libérer l'ancienne date
+    nouvellesDisponibilites = nouvellesDisponibilites.map((d: any) => 
+      d.date === devisADeplacer.date && d.statut === 'reserve' 
+        ? { ...d, statut: 'disponible', motif: undefined }
+        : d
+    );
+
+    // Réserver la nouvelle date
+    const nouvelleDateIndex = nouvellesDisponibilites.findIndex(d => d.date === nouvelleDate);
+    if (nouvelleDateIndex >= 0) {
+      nouvellesDisponibilites[nouvelleDateIndex] = {
+        ...nouvellesDisponibilites[nouvelleDateIndex],
+        statut: 'reserve',
+        motif: `Réservé - ${devisADeplacer.client.nom}`
+      };
+    } else {
+      nouvellesDisponibilites.push({
+        date: nouvelleDate,
+        statut: 'reserve',
+        majoration: 0,
+        motif: `Réservé - ${devisADeplacer.client.nom}`
+      });
+    }
+
+    localStorage.setItem('romeden_disponibilites', JSON.stringify(nouvellesDisponibilites));
+    alert(`📅 Réservation déplacée au ${new Date(nouvelleDate).toLocaleDateString('fr-FR')}`);
+  };
+
+  const ouvrirDetail = (devisItem: DevisEnAttente) => {
+    setModalDetail({ isOpen: true, devis: devisItem });
+  };
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('fr-FR', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  };
+
+  const devisEnAttente = devis.filter(d => d.statut === 'en_attente');
+  const devisTraites = devis.filter(d => d.statut !== 'en_attente');
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-800">📝 Réservations</h2>
+        <div className="text-sm text-gray-600">
+          {devisEnAttente.length} en attente • {devisTraites.length} traitées
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-orange-50 rounded-xl p-4">
+          <div className="text-2xl font-bold text-orange-600">{devisEnAttente.length}</div>
+          <div className="text-orange-700">Devis en attente</div>
+        </div>
+        <div className="bg-green-50 rounded-xl p-4">
+          <div className="text-2xl font-bold text-green-600">
+            {devis.filter(d => d.statut === 'confirme').length}
+          </div>
+          <div className="text-green-700">Confirmés</div>
+        </div>
+        <div className="bg-red-50 rounded-xl p-4">
+          <div className="text-2xl font-bold text-red-600">
+            {devis.filter(d => d.statut === 'refuse').length}
+          </div>
+          <div className="text-red-700">Refusés</div>
+        </div>
+      </div>
+
+      {devisEnAttente.length > 0 && (
+        <div>
+          <h3 className="text-xl font-semibold text-gray-800 mb-4">⏳ En attente de validation</h3>
+          <div className="space-y-4">
+            {devisEnAttente.map((devisItem) => (
+              <div key={devisItem.id} className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-orange-400">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  <div 
+                    className="flex-1 cursor-pointer"
+                    onClick={() => ouvrirDetail(devisItem)}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <h4 className="font-bold text-lg text-gray-800">{devisItem.client.nom}</h4>
+                      <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">
+                        {devisItem.id}
+                      </span>
+                      <span className="text-xs text-blue-500">👁️ Cliquer pour détails</span>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <div className="font-semibold text-gray-600 mb-1">📅 Date événement</div>
+                        <div className="text-gray-800">{formatDate(devisItem.date)}</div>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-gray-600 mb-1">📞 Contact</div>
+                        <div className="text-gray-800 font-mono">{devisItem.client.telephone}</div>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-gray-600 mb-1">💰 Montant</div>
+                        <div className="text-xl font-bold text-green-600">{devisItem.montant}€</div>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-gray-600 mb-1">🎪 Prestations</div>
+                        <div className="text-gray-800">{devisItem.prestations.join(', ')}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2 min-w-[200px]">
+                    <button
+                      onClick={() => confirmerDevis(devisItem.id)}
+                      className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    >
+                      ✅ Accepter & Téléphoner
+                    </button>
+                    <button
+                      onClick={() => refuserDevis(devisItem.id)}
+                      className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    >
+                      ❌ Refuser
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {devisTraites.length > 0 && (
+        <div>
+          <h3 className="text-xl font-semibold text-gray-800 mb-4">📋 Historique <span className="text-sm text-gray-500">(cliquer pour détails/actions)</span></h3>
+          <div className="space-y-3">
+            {devisTraites.map((devisItem) => (
+              <div 
+                key={devisItem.id} 
+                className={`bg-white rounded-xl shadow-sm p-4 border-l-4 cursor-pointer hover:shadow-md transition-shadow ${
+                  devisItem.statut === 'confirme' ? 'border-green-400' : 'border-red-400'
+                }`}
+                onClick={() => ouvrirDetail(devisItem)}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-semibold">{devisItem.client.nom}</span>
+                    <span className="text-gray-500 ml-2">• {formatDate(devisItem.date)}</span>
+                    <span className="text-gray-500 ml-2">• {devisItem.montant}€</span>
+                    {devisItem.statut === 'confirme' && (
+                      <span className="text-xs text-blue-500 ml-2">🛠️ Actions disponibles</span>
+                    )}
+                  </div>
+                  <div className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                    devisItem.statut === 'confirme' 
+                      ? 'bg-green-100 text-green-700' 
+                      : 'bg-red-100 text-red-700'
+                  }`}>
+                    {devisItem.statut === 'confirme' ? '✅ Confirmé' : '❌ Refusé'}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {devisEnAttente.length === 0 && (
+        <div className="text-center py-12 text-gray-500">
+          <div className="text-6xl mb-4">📝</div>
+          <div className="text-xl">Aucun devis en attente</div>
+          <div className="text-sm">Les nouvelles demandes apparaîtront ici</div>
+        </div>
+      )}
+
+      {/* Modal détail */}
+      <ModalDetail
+        isOpen={modalDetail.isOpen}
+        onClose={() => setModalDetail({isOpen: false, devis: null})}
+        devis={modalDetail.devis!}
+        onAnnuler={annulerReservation}
+        onDeplacer={deplacerReservation}
+      />
+    </div>
+  );
+};
+
+export default ReservationsView;

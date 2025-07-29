@@ -1,0 +1,319 @@
+import React, { useState, useEffect } from 'react';
+import { useAdminCalendar } from '../../../hooks/calendar/useAdminCalendar';
+import { formatDateFr, dateToString } from '../../../utils/calendar/calendarUtils';
+import { getNomJourFerie } from '../../../utils/calendar/holidaysData';
+import { DisponibiliteJour } from '../../../utils/types';
+import Modal from '../../ui/Modal';
+
+interface DateManagementModalProps {
+  date: Date;
+  onClose: () => void;
+}
+
+const DateManagementModal: React.FC<DateManagementModalProps> = ({ date, onClose }) => {
+  const { availability, planning } = useAdminCalendar();
+  
+  const [statut, setStatut] = useState<'disponible' | 'indisponible' | 'bloque'>('indisponible');
+  const [majoration, setMajoration] = useState<number>(0);
+  const [motif, setMotif] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const dateStr = dateToString(date);
+  const dateInfo = availability.getDateInfo(date);
+  const customAvailability = availability.getCustomAvailability(date);
+  const events = planning.getEvenementsForDate(date);
+  const jourFerie = getNomJourFerie(date);
+
+  useEffect(() => {
+    console.log('🔍 Modal pour date:', dateStr);
+    console.log('📊 Info actuelle:', dateInfo);
+    console.log('⚙️ Personnalisation:', customAvailability);
+
+    if (customAvailability) {
+      setStatut(customAvailability.statut as any);
+      setMajoration(customAvailability.majoration);
+      setMotif(customAvailability.motif || '');
+    } else {
+      setStatut('indisponible');
+      setMajoration(0);
+      setMotif('');
+    }
+  }, [dateStr, customAvailability, dateInfo]);
+
+  // Sauvegarde DIRECTE dans localStorage
+  const handleSave = () => {
+    if (isSaving) return;
+    
+    setIsSaving(true);
+    console.log('💾 SAUVEGARDE DIRECTE:', { date: dateStr, statut, majoration, motif });
+
+    try {
+      // Charger les disponibilités existantes
+      const existingData = localStorage.getItem('romeden_disponibilites');
+      let disponibilites: DisponibiliteJour[] = existingData ? JSON.parse(existingData) : [];
+      
+      console.log('📊 Données existantes:', disponibilites.length, 'éléments');
+
+      // Supprimer l'ancienne entrée pour cette date si elle existe
+      disponibilites = disponibilites.filter(d => d.date !== dateStr);
+
+      // Ajouter la nouvelle disponibilité
+      const newDisponibilite: DisponibiliteJour = {
+        date: dateStr,
+        statut,
+        majoration,
+        motif: motif || undefined
+      };
+
+      disponibilites.push(newDisponibilite);
+
+      // Sauvegarder dans localStorage
+      localStorage.setItem('romeden_disponibilites', JSON.stringify(disponibilites));
+      
+      console.log('✅ SAUVEGARDE RÉUSSIE !');
+      console.log('📊 Nouvelle donnée:', newDisponibilite);
+      console.log('📊 Total après sauvegarde:', disponibilites.length, 'éléments');
+
+      // Afficher un message de succès
+      alert(`✅ Date du ${date.toLocaleDateString('fr-FR')} sauvegardée !\n\nStatut: ${statut}\nMajoration: ${majoration}%`);
+
+      // Fermer le modal
+      setTimeout(() => {
+        setIsSaving(false);
+        onClose();
+        // Forcer le rechargement de la page pour voir les changements
+        window.location.reload();
+      }, 500);
+
+    } catch (error) {
+      console.error('❌ ERREUR SAUVEGARDE:', error);
+      alert('❌ Erreur lors de la sauvegarde !\n\nVeuillez réessayer.');
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = () => {
+    if (window.confirm(`Supprimer la configuration de la date ${date.toLocaleDateString('fr-FR')} ?\n\nElle redeviendra indisponible par défaut.`)) {
+      try {
+        const existingData = localStorage.getItem('romeden_disponibilites');
+        let disponibilites: DisponibiliteJour[] = existingData ? JSON.parse(existingData) : [];
+        
+        disponibilites = disponibilites.filter(d => d.date !== dateStr);
+        localStorage.setItem('romeden_disponibilites', JSON.stringify(disponibilites));
+        
+        console.log('🗑️ Suppression réussie');
+        alert('🗑️ Configuration supprimée !');
+        
+        onClose();
+        window.location.reload();
+      } catch (error) {
+        console.error('❌ Erreur suppression:', error);
+        alert('❌ Erreur lors de la suppression !');
+      }
+    }
+  };
+
+  return (
+    <Modal isOpen={true} onClose={onClose}>
+      <div className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold mb-4">
+            <span className="bg-gradient-to-r from-rose-600 to-amber-600 bg-clip-text text-transparent">
+              📅 Configuration de date
+            </span>
+          </h2>
+          <div className="text-2xl font-bold text-gray-800 mb-2">
+            {formatDateFr(date)}
+          </div>
+          <div className="text-sm text-gray-500">
+            Date: {dateStr}
+          </div>
+          {jourFerie && (
+            <p className="text-purple-600 font-medium mt-2">🎉 {jourFerie}</p>
+          )}
+        </div>
+
+        {/* État actuel */}
+        <div className="bg-gradient-to-r from-rose-50 to-pink-50 rounded-2xl p-6 mb-8 border border-rose-200">
+          <h3 className="font-bold text-gray-800 mb-4">📊 État actuel du système</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <div className="text-sm text-gray-600">Statut</div>
+              <div className={`font-medium ${
+                dateInfo.statut === 'disponible' ? 'text-green-600' :
+                dateInfo.statut === 'reserve' ? 'text-amber-600' :
+                dateInfo.statut === 'bloque' ? 'text-gray-600' :
+                'text-red-600'
+              }`}>
+                {dateInfo.statut === 'disponible' ? '✅ Disponible' :
+                 dateInfo.statut === 'reserve' ? '📅 Réservé' :
+                 dateInfo.statut === 'bloque' ? '🔒 Bloqué' :
+                 '🚫 Indisponible'}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-600">Majoration</div>
+              <div className="font-medium text-orange-600">
+                {dateInfo.majoration > 0 ? `+${dateInfo.majoration}%` : 'Aucune'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Sélection du nouveau statut */}
+        <div className="mb-8">
+          <h3 className="text-xl font-bold text-gray-800 mb-4">⚙️ Choisir le nouveau statut</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
+            {/* DISPONIBLE */}
+            <div
+              onClick={() => {
+                console.log('🟢 SÉLECTION: Disponible');
+                setStatut('disponible');
+              }}
+              className={`p-6 rounded-2xl border-4 cursor-pointer transition-all ${
+                statut === 'disponible'
+                  ? 'bg-green-100 border-green-500 text-green-800 shadow-xl transform scale-105'
+                  : 'bg-white border-gray-300 text-gray-700 hover:border-green-400 hover:bg-green-50'
+              }`}
+            >
+              <div className="text-4xl mb-3 text-center">✅</div>
+              <div className="font-bold text-xl text-center">DISPONIBLE</div>
+              <div className="text-sm text-center mt-2">Clients peuvent réserver</div>
+            </div>
+
+            {/* INDISPONIBLE */}
+            <div
+              onClick={() => {
+                console.log('🔴 SÉLECTION: Indisponible');
+                setStatut('indisponible');
+              }}
+              className={`p-6 rounded-2xl border-4 cursor-pointer transition-all ${
+                statut === 'indisponible'
+                  ? 'bg-red-100 border-red-500 text-red-800 shadow-xl transform scale-105'
+                  : 'bg-white border-gray-300 text-gray-700 hover:border-red-400 hover:bg-red-50'
+              }`}
+            >
+              <div className="text-4xl mb-3 text-center">🚫</div>
+              <div className="font-bold text-xl text-center">INDISPONIBLE</div>
+              <div className="text-sm text-center mt-2">Date fermée</div>
+            </div>
+
+            {/* BLOQUÉ */}
+            <div
+              onClick={() => {
+                console.log('⚫ SÉLECTION: Bloqué');
+                setStatut('bloque');
+              }}
+              className={`p-6 rounded-2xl border-4 cursor-pointer transition-all ${
+                statut === 'bloque'
+                  ? 'bg-gray-100 border-gray-500 text-gray-800 shadow-xl transform scale-105'
+                  : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:bg-gray-50'
+              }`}
+            >
+              <div className="text-4xl mb-3 text-center">🔒</div>
+              <div className="font-bold text-xl text-center">BLOQUÉ</div>
+              <div className="text-sm text-center mt-2">Congés, maintenance</div>
+            </div>
+          </div>
+
+          {/* Confirmation visuelle */}
+          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+            <div className="text-center font-bold text-blue-800">
+              📋 Statut choisi : <span className="text-xl">{statut.toUpperCase()}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Majoration si disponible */}
+        {statut === 'disponible' && (
+          <div className="mb-6">
+            <label className="block text-lg font-bold text-gray-800 mb-3">
+              💰 Majoration du prix (%)
+            </label>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              value={majoration}
+              onChange={(e) => setMajoration(Number(e.target.value))}
+              className="w-full px-6 py-4 text-xl rounded-2xl border-4 border-rose-200 focus:border-rose-400 focus:ring-4 focus:ring-rose-200 transition-all"
+              placeholder="0"
+            />
+            <p className="text-sm text-gray-600 mt-2">
+              💡 Les weekends et jours fériés ont déjà des majorations automatiques
+            </p>
+          </div>
+        )}
+
+        {/* Motif */}
+        <div className="mb-8">
+          <label className="block text-lg font-bold text-gray-800 mb-3">
+            📝 Note / Motif (optionnel)
+          </label>
+          <input
+            type="text"
+            value={motif}
+            onChange={(e) => setMotif(e.target.value)}
+            className="w-full px-6 py-4 text-lg rounded-2xl border-4 border-rose-200 focus:border-rose-400 focus:ring-4 focus:ring-rose-200 transition-all"
+            placeholder="Ex: Congés été, événement familial..."
+          />
+        </div>
+
+        {/* Actions */}
+        <div className="flex flex-col space-y-4">
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            className={`w-full px-8 py-6 rounded-2xl font-bold text-2xl transition-all shadow-2xl ${
+              isSaving
+                ? 'bg-gray-400 text-white cursor-not-allowed'
+                : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600 transform hover:scale-105'
+            }`}
+          >
+            {isSaving ? '💾 SAUVEGARDE EN COURS...' : '💾 SAUVEGARDER MAINTENANT'}
+          </button>
+          
+          <div className="flex space-x-4">
+            {customAvailability && (
+              <button
+                onClick={handleDelete}
+                disabled={isSaving}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-red-400 to-pink-400 text-white rounded-2xl font-medium hover:from-red-500 hover:to-pink-500 transition-all transform hover:scale-105 shadow-lg disabled:opacity-50"
+              >
+                🗑️ Supprimer la configuration
+              </button>
+            )}
+            
+            <button
+              onClick={onClose}
+              disabled={isSaving}
+              className="flex-1 px-6 py-3 bg-gray-300 text-gray-700 rounded-2xl font-medium hover:bg-gray-400 transition-all disabled:opacity-50"
+            >
+              ✖️ Annuler
+            </button>
+          </div>
+        </div>
+
+        {/* Debug */}
+        <div className="mt-6 p-4 bg-gray-100 rounded-xl">
+          <details>
+            <summary className="cursor-pointer font-bold">🔍 Informations techniques</summary>
+            <div className="mt-2 text-sm font-mono space-y-1">
+              <div>📅 Date: {dateStr}</div>
+              <div>📊 Statut formulaire: <span className="bg-yellow-200 px-1">{statut}</span></div>
+              <div>💰 Majoration: {majoration}%</div>
+              <div>📝 Motif: "{motif}"</div>
+              <div>⚙️ A config: {customAvailability ? 'OUI' : 'NON'}</div>
+            </div>
+          </details>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+export default DateManagementModal;

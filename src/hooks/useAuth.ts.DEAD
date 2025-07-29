@@ -1,0 +1,104 @@
+import { useState, useEffect } from 'react';
+import { User, Session, AuthError } from '@supabase/supabase-js';
+import { supabase } from '../utils/supabaseClient';
+
+interface AuthState {
+  user: User | null;
+  session: Session | null;
+  loading: boolean;
+  isAuthenticated: boolean;
+}
+
+interface AuthActions {
+  signIn: (email: string, password: string) => Promise<{ error?: AuthError }>;
+  signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error?: AuthError }>;
+}
+
+export const useAuth = (): AuthState & AuthActions => {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Récupérer la session actuelle
+    const getSession = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('Erreur récupération session:', error);
+      } else {
+        setSession(session);
+        setUser(session?.user ?? null);
+      }
+      setLoading(false);
+    };
+
+    getSession();
+
+    // Écouter les changements d'authentification
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session);
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const signIn = async (email: string, password: string) => {
+    setLoading(true);
+    
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      console.error('Erreur connexion:', error);
+      setLoading(false);
+      return { error };
+    }
+
+    // La session sera mise à jour automatiquement via onAuthStateChange
+    return { error: undefined };
+  };
+
+  const signOut = async () => {
+    setLoading(true);
+    
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) {
+      console.error('Erreur déconnexion:', error);
+    }
+    
+    // La session sera mise à jour automatiquement via onAuthStateChange
+  };
+
+  const resetPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/admin/reset-password`,
+    });
+
+    if (error) {
+      console.error('Erreur reset password:', error);
+      return { error };
+    }
+
+    return { error: undefined };
+  };
+
+  return {
+    user,
+    session,
+    loading,
+    isAuthenticated: !!user,
+    signIn,
+    signOut,
+    resetPassword,
+  };
+};
