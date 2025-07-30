@@ -130,24 +130,15 @@ const ReservationsView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      
-      {/* Header */}
-      <div className="bg-white rounded-3xl shadow-lg p-8">
-        <h2 className="text-3xl font-bold text-center mb-4">
-          <span className="bg-gradient-to-r from-rose-600 to-amber-600 bg-clip-text text-transparent">
-            📋 Gestion des Réservations
-          </span>
-        </h2>
-        <p className="text-center text-gray-600">Suivez et gérez toutes vos demandes de réservation</p>
-        
-        <div className="flex justify-center mt-4">
-          <button
-            onClick={forceReload}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm"
-          >
-            🔄 Actualiser depuis Supabase
-          </button>
-        </div>
+
+      {/* Bouton actualiser */}
+      <div className="flex justify-center">
+        <button
+          onClick={forceReload}
+          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm"
+        >
+          🔄 Actualiser depuis Supabase
+        </button>
       </div>
 
       {/* Statistiques */}

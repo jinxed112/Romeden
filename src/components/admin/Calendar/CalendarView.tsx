@@ -95,58 +95,47 @@ const CalendarView: React.FC = () => {
   return (
     <div className="space-y-6">
       
-      {/* Header */}
-      <div className="bg-white rounded-3xl shadow-lg p-6">
-        <h2 className="text-3xl font-bold text-center mb-4">
-          <span className="bg-gradient-to-r from-rose-600 to-amber-600 bg-clip-text text-transparent">
-            📅 Calendrier Admin (Supabase)
-          </span>
-        </h2>
-        <p className="text-center text-gray-600">
-          Par défaut toutes les dates sont ROUGES (indisponibles)
-        </p>
-        <div className="text-center text-sm text-blue-600 mt-2">
-          📊 {availability.disponibilites.length} disponibilités en cache
-        </div>
-      </div>
-
       {/* Navigation */}
-      <div className="bg-white rounded-3xl shadow-lg p-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="bg-white rounded-3xl shadow-lg p-4 sm:p-6">
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
           <button
             onClick={goToPreviousMonth}
-            className="px-6 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 font-bold"
+            className="px-4 py-2 sm:px-6 sm:py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 font-bold text-sm sm:text-base"
           >
-            ← Précédent
+            ← Préc.
           </button>
           
-          <h3 className="text-2xl font-bold text-gray-800">
-            {monthName} {year}
+          <h3 className="text-lg sm:text-2xl font-bold text-gray-800 text-center flex-1 mx-2">
+            {monthName.length > 6 ? monthName.substring(0, 4) + '.' : monthName} {year}
           </h3>
           
           <button
             onClick={goToNextMonth}
-            className="px-6 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 font-bold"
+            className="px-4 py-2 sm:px-6 sm:py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 font-bold text-sm sm:text-base"
           >
-            Suivant →
+            Suiv. →
           </button>
         </div>
 
-        <div className="flex justify-center space-x-4">
+        <div className="flex justify-center space-x-2 sm:space-x-4">
           <select
             value={month}
             onChange={(e) => goToMonth(parseInt(e.target.value))}
-            className="px-4 py-2 border rounded-lg"
+            className="px-3 py-2 sm:px-4 sm:py-2 border rounded-lg text-sm sm:text-base"
           >
-            {Array.from({ length: 12 }, (_, i) => (
-              <option key={i} value={i}>{getMonthNameFr(i)}</option>
-            ))}
+            {Array.from({ length: 12 }, (_, i) => {
+              const fullName = getMonthNameFr(i);
+              const shortName = fullName.length > 6 ? fullName.substring(0, 4) + '.' : fullName;
+              return (
+                <option key={i} value={i}>{shortName}</option>
+              );
+            })}
           </select>
           
           <select
             value={year}
             onChange={(e) => goToYear(parseInt(e.target.value))}
-            className="px-4 py-2 border rounded-lg"
+            className="px-3 py-2 sm:px-4 sm:py-2 border rounded-lg text-sm sm:text-base"
           >
             {[2024, 2025, 2026, 2027].map(y => (
               <option key={y} value={y}>{y}</option>
@@ -155,9 +144,9 @@ const CalendarView: React.FC = () => {
 
           <button
             onClick={() => availability.forceReload()}
-            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+            className="px-3 py-2 sm:px-4 sm:py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm sm:text-base"
           >
-            🔄 Actualiser
+            🔄
           </button>
         </div>
       </div>
@@ -216,7 +205,7 @@ const CalendarView: React.FC = () => {
 
       {/* Légende */}
       <div className="bg-white rounded-3xl shadow-lg p-6">
-        <h4 className="font-bold mb-4">🏷️ Légende</h4>
+        <h4 className="font-bold mb-4 text-gray-900">🏷️ Légende</h4>
         <div className="flex flex-wrap gap-4">
           <div className="flex items-center space-x-2">
             <div className="w-4 h-4 bg-red-100 border border-red-300 rounded"></div>
@@ -298,13 +287,13 @@ const SupabaseModal: React.FC<{
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-3xl p-8 max-w-lg w-full mx-4">
         
-        <h3 className="text-2xl font-bold text-center mb-6">
+        <h3 className="text-2xl font-bold text-center mb-6 text-gray-900">
           📅 {date.toLocaleDateString('fr-FR')} (SUPABASE)
         </h3>
 
         <div className="space-y-4 mb-6">
           <div>
-            <label className="block font-bold mb-3">Statut :</label>
+            <label className="block font-bold mb-3 text-gray-900">Statut :</label>
             <div className="space-y-2">
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
@@ -346,7 +335,7 @@ const SupabaseModal: React.FC<{
 
           {statut === 'disponible' && (
             <div>
-              <label className="block font-bold mb-2">Majoration (%) :</label>
+              <label className="block font-bold mb-2 text-gray-900">Majoration (%) :</label>
               <input
                 type="number"
                 min="0"
@@ -360,7 +349,7 @@ const SupabaseModal: React.FC<{
           )}
 
           <div>
-            <label className="block font-bold mb-2">Note :</label>
+            <label className="block font-bold mb-2 text-gray-900">Note :</label>
             <input
               type="text"
               value={motif}

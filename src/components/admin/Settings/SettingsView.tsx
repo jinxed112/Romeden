@@ -258,12 +258,7 @@ const SettingsView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-gray-800">⚙️ Paramètres</h2>
-        <p className="text-gray-600">Configuration de votre calendrier et informations de contact</p>
-      </div>
+    <div className="space-y-6">
 
       {/* Informations de contact */}
       <div className="bg-white rounded-xl shadow-lg p-6">
@@ -282,16 +277,6 @@ const SettingsView: React.FC = () => {
               placeholder="votre@email.fr"
             />
           </div>
-
-        {/* Bouton sauvegarder notifications */}
-        <div className="border-t pt-6 mt-6">
-          <button
-            onClick={sauvegarderNotifications}
-            className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg"
-          >
-            💾 Sauvegarder les notifications
-          </button>
-        </div>
 
           <div className="bg-green-50 p-4 rounded-lg">
             <label className="block text-sm font-medium text-green-800 mb-2">
@@ -332,26 +317,6 @@ const SettingsView: React.FC = () => {
               max="2030"
             />
           </div>
-        </div>
-
-        {/* Bouton sauvegarder fermetures */}
-        <div className="border-t pt-6 mt-6">
-          <button
-            onClick={sauvegarderFermetures}
-            className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg"
-          >
-            💾 Sauvegarder les fermetures
-          </button>
-        </div>
-
-        {/* Bouton sauvegarder majorations */}
-        <div className="border-t pt-6 mt-6">
-          <button
-            onClick={sauvegarderMajorations}
-            className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg"
-          >
-            💾 Sauvegarder les majorations
-          </button>
         </div>
 
         {/* Réseaux sociaux */}
@@ -400,7 +365,7 @@ const SettingsView: React.FC = () => {
           </div>
         </div>
 
-        {/* Bouton sauvegarder contact */}
+        {/* Bouton sauvegarder contact - AU BON ENDROIT */}
         <div className="border-t pt-6 mt-6">
           <button
             onClick={sauvegarderContact}
@@ -508,6 +473,16 @@ const SettingsView: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* Bouton sauvegarder majorations - AU BON ENDROIT */}
+        <div className="border-t pt-6 mt-6">
+          <button
+            onClick={sauvegarderMajorations}
+            className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg"
+          >
+            💾 Sauvegarder les majorations
+          </button>
+        </div>
       </div>
 
       {/* Jours de fermeture */}
@@ -592,6 +567,16 @@ const SettingsView: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* Bouton sauvegarder fermetures - AU BON ENDROIT MAINTENANT */}
+        <div className="border-t pt-6 mt-6">
+          <button
+            onClick={sauvegarderFermetures}
+            className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg"
+          >
+            💾 Sauvegarder les fermetures
+          </button>
+        </div>
       </div>
 
       {/* Notifications */}
@@ -648,6 +633,16 @@ const SettingsView: React.FC = () => {
               }`} />
             </button>
           </div>
+        </div>
+
+        {/* Bouton sauvegarder notifications - AU BON ENDROIT */}
+        <div className="border-t pt-6 mt-6">
+          <button
+            onClick={sauvegarderNotifications}
+            className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 shadow-lg"
+          >
+            💾 Sauvegarder les notifications
+          </button>
         </div>
       </div>
 

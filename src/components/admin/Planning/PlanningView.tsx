@@ -155,16 +155,6 @@ const PlanningView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      
-      {/* Header */}
-      <div className="bg-white rounded-3xl shadow-lg p-8">
-        <h2 className="text-3xl font-bold text-center mb-4">
-          <span className="bg-gradient-to-r from-rose-600 to-amber-600 bg-clip-text text-transparent">
-            📋 Planning & Statistiques
-          </span>
-        </h2>
-        <p className="text-center text-gray-600">Vue d'ensemble de votre activité sur les 30 prochains jours</p>
-      </div>
 
       {/* Statistiques rapides */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
