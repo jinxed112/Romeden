@@ -1,16 +1,17 @@
 import { supabase } from '../utils/supabaseClient';
 
+// Interface corrigée selon la vraie structure de votre table
 export interface ReservationSupabase {
   id: string;
-  devis_id: string;
   client_nom: string;
   client_email: string;
-  client_telephone?: string; // Nullable dans ta table
+  client_telephone?: string; // Nullable dans votre table
   date_evenement: string; // Format YYYY-MM-DD
-  prestations: any; // JSON des prestations
+  prestations: any; // JSONB dans votre table
   montant: number;
   statut: 'en_attente' | 'confirme' | 'refuse';
   created_at: string;
+  devis_id?: string; // Nullable dans votre table
 }
 
 /**
@@ -54,6 +55,7 @@ export const createReservation = async (reservation: Omit<ReservationSupabase, '
 
     if (error) {
       console.error('❌ Erreur création réservation:', error);
+      console.error('❌ Détails erreur:', error.message, error.details, error.hint);
       return null;
     }
 

@@ -72,6 +72,16 @@ const ReservationsView: React.FC = () => {
     }
   };
 
+  // Extraire les détails client depuis les prestations
+  const getClientDetails = (prestations: any) => {
+    try {
+      const data = typeof prestations === 'string' ? JSON.parse(prestations) : prestations;
+      return data?.client_details || {};
+    } catch (error) {
+      return {};
+    }
+  };
+
   // Fonction pour afficher les prestations de façon lisible
   const renderPrestations = (prestations: any) => {
     try {
@@ -227,109 +237,160 @@ const ReservationsView: React.FC = () => {
               <p className="text-gray-600">Les nouvelles réservations apparaîtront ici</p>
             </div>
           ) : (
-            filteredReservations.map((reservation) => (
-              <div
-                key={reservation.id}
-                className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-all"
-              >
-                <div className="flex items-start justify-between">
-                  
-                  {/* Infos principales */}
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-4 mb-3">
-                      <h4 className="text-lg font-bold text-gray-800">
-                        {reservation.client_nom}
-                      </h4>
-                      
-                      <div className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(reservation.statut)}`}>
-                        {getStatusIcon(reservation.statut)} {reservation.statut.replace('_', ' ').toUpperCase()}
-                      </div>
-                      
-                      {reservation.devis_id && (
-                        <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                          Devis #{reservation.devis_id}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600 mb-4">
-                      <div>
-                        <span className="font-medium">📧 Email:</span>
-                        <br />
-                        {reservation.client_email}
-                      </div>
-                      
-                      {reservation.client_telephone && (
-                        <div>
-                          <span className="font-medium">📞 Téléphone:</span>
-                          <br />
-                          {reservation.client_telephone}
-                        </div>
-                      )}
-                      
-                      <div>
-                        <span className="font-medium">📅 Date événement:</span>
-                        <br />
-                        {new Date(reservation.date_evenement).toLocaleDateString('fr-FR', {
-                          weekday: 'long',
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric'
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Prestations avec affichage propre */}
-                    <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                      <div className="flex justify-between items-center mb-3">
-                        <span className="font-medium text-gray-700">🛍️ Services commandés:</span>
-                        <span className="text-xl font-bold text-rose-600">
-                          {formaterPrix(reservation.montant)}
-                        </span>
-                      </div>
-                      
-                      {renderPrestations(reservation.prestations)}
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="ml-6 flex flex-col space-y-2">
+            filteredReservations.map((reservation) => {
+              const clientDetails = getClientDetails(reservation.prestations);
+              
+              return (
+                <div
+                  key={reservation.id}
+                  className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-all"
+                >
+                  <div className="flex items-start justify-between">
                     
-                    {/* Changer statut */}
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleStatusChange(reservation.id, 'confirme')}
-                        disabled={reservation.statut === 'confirme'}
-                        className="px-3 py-1 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white text-xs rounded transition-colors"
-                      >
-                        ✅ Confirmer
-                      </button>
-                      
-                      <button
-                        onClick={() => handleStatusChange(reservation.id, 'refuse')}
-                        disabled={reservation.statut === 'refuse'}
-                        className="px-3 py-1 bg-red-500 hover:bg-red-600 disabled:bg-gray-300 text-white text-xs rounded transition-colors"
-                      >
-                        ❌ Refuser
-                      </button>
+                    {/* Infos principales */}
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-4 mb-3">
+                        <h4 className="text-lg font-bold text-gray-800">
+                          {reservation.client_nom}
+                        </h4>
+                        
+                        <div className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(reservation.statut)}`}>
+                          {getStatusIcon(reservation.statut)} {reservation.statut.replace('_', ' ').toUpperCase()}
+                        </div>
+                        
+                        {reservation.devis_id && (
+                          <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                            Devis #{reservation.devis_id}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600 mb-4">
+                        <div>
+                          <span className="font-medium">📧 Email:</span>
+                          <br />
+                          {reservation.client_email}
+                        </div>
+                        
+                        {reservation.client_telephone && (
+                          <div>
+                            <span className="font-medium">📞 Téléphone:</span>
+                            <br />
+                            {reservation.client_telephone}
+                          </div>
+                        )}
+                        
+                        <div>
+                          <span className="font-medium">📅 Date événement:</span>
+                          <br />
+                          {new Date(reservation.date_evenement).toLocaleDateString('fr-FR', {
+                            weekday: 'long',
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric'
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Détails de l'événement */}
+                      {(clientDetails.type_evenement || clientDetails.adresse_evenement || clientDetails.nombre_invites) && (
+                        <div className="bg-blue-50 rounded-lg p-4 mb-4 border border-blue-200">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            {clientDetails.type_evenement && (
+                              <div>
+                                <span className="font-medium text-blue-700">🎉 Type:</span>
+                                <br />
+                                <span className="text-blue-600 capitalize">{clientDetails.type_evenement}</span>
+                              </div>
+                            )}
+                            
+                            {clientDetails.nombre_invites && (
+                              <div>
+                                <span className="font-medium text-blue-700">👥 Invités:</span>
+                                <br />
+                                <span className="text-blue-600">{clientDetails.nombre_invites} personnes</span>
+                              </div>
+                            )}
+                            
+                            {clientDetails.adresse_evenement && (
+                              <div className="md:col-span-2">
+                                <span className="font-medium text-blue-700">📍 Adresse:</span>
+                                <br />
+                                <span className="text-blue-600">{clientDetails.adresse_evenement}</span>
+                              </div>
+                            )}
+                            
+                            {clientDetails.theme_couleurs && (
+                              <div className="md:col-span-2">
+                                <span className="font-medium text-blue-700">🎨 Thème:</span>
+                                <br />
+                                <span className="text-blue-600">{clientDetails.theme_couleurs}</span>
+                              </div>
+                            )}
+                            
+                            {clientDetails.message_client && (
+                              <div className="md:col-span-2">
+                                <span className="font-medium text-blue-700">💬 Message:</span>
+                                <br />
+                                <span className="text-blue-600 italic">"{clientDetails.message_client}"</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Prestations avec affichage propre */}
+                      <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                        <div className="flex justify-between items-center mb-3">
+                          <span className="font-medium text-gray-700">🛍️ Services commandés:</span>
+                          <span className="text-xl font-bold text-rose-600">
+                            {formaterPrix(reservation.montant)}
+                          </span>
+                        </div>
+                        
+                        {renderPrestations(reservation.prestations)}
+                      </div>
                     </div>
 
-                    {/* Supprimer */}
-                    <button
-                      onClick={() => handleDelete(reservation.id)}
-                      className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white text-xs rounded transition-colors"
-                    >
-                      🗑️ Supprimer
-                    </button>
+                    {/* Actions */}
+                    <div className="ml-6 flex flex-col space-y-2">
+                      
+                      {/* Changer statut */}
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleStatusChange(reservation.id, 'confirme')}
+                          disabled={reservation.statut === 'confirme'}
+                          className="px-3 py-1 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white text-xs rounded transition-colors"
+                        >
+                          ✅ Confirmer
+                        </button>
+                        
+                        <button
+                          onClick={() => handleStatusChange(reservation.id, 'refuse')}
+                          disabled={reservation.statut === 'refuse'}
+                          className="px-3 py-1 bg-red-500 hover:bg-red-600 disabled:bg-gray-300 text-white text-xs rounded transition-colors"
+                        >
+                          ❌ Refuser
+                        </button>
+                      </div>
 
-                    {/* Date de création */}
-                    <div className="text-xs text-gray-500 text-center">
-                      {new Date(reservation.created_at).toLocaleDateString('fr-FR')}
+                      {/* Supprimer */}
+                      <button
+                        onClick={() => handleDelete(reservation.id)}
+                        className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white text-xs rounded transition-colors"
+                      >
+                        🗑️ Supprimer
+                      </button>
+
+                      {/* Date de création */}
+                      <div className="text-xs text-gray-500 text-center">
+                        {new Date(reservation.created_at).toLocaleDateString('fr-FR')}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
