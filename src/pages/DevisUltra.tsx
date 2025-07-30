@@ -154,21 +154,27 @@ const DevisUltra: React.FC = () => {
       // Générer un ID de devis unique
       const devisId = `DV-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
 
+      // Test avec version simplifiée d'abord
       const reservationData = {
         client_nom: formData.nom,
         client_email: formData.email,
-        client_telephone: formData.telephone,
+        client_telephone: formData.telephone || '',
         date_evenement: dateEvenement.toISOString().split('T')[0], // Format YYYY-MM-DD
-        montant: totalAvecMajoration(),
+        montant: Math.round(totalAvecMajoration() * 100) / 100, // Arrondir à 2 décimales
         prestations: JSON.stringify(prestationsData), // Stocker en JSON
-        statut: 'en_attente' as const,
-        type_evenement: formData.typeEvenement || selectedCategory,
-        adresse_evenement: formData.adresse,
-        nombre_invites: formData.nombreInvites,
-        theme_couleurs: formData.theme,
-        message_client: formData.message,
-        devis_id: devisId // ID généré automatiquement
+        statut: 'en_attente' as const
       };
+
+      console.log('🔍 DEBUG - Données simplifiées:', reservationData);
+      console.log('🔍 DEBUG - Types:', {
+        client_nom: typeof reservationData.client_nom,
+        client_email: typeof reservationData.client_email,
+        client_telephone: typeof reservationData.client_telephone,
+        date_evenement: typeof reservationData.date_evenement,
+        montant: typeof reservationData.montant,
+        prestations: typeof reservationData.prestations,
+        statut: typeof reservationData.statut
+      });
 
       console.log('📤 Envoi réservation:', reservationData);
 
