@@ -2,13 +2,39 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDevis } from '../hooks/useDevis';
 import { usePrestations } from '../hooks/usePrestations';
+import { useReservations } from '../hooks/useReservations';
 import { formaterPrix } from '../utils/devisCalculator';
 import DateSelector from '../components/devis/DateSelector';
 
+// Interface pour les données du formulaire
+interface FormData {
+  nom: string;
+  email: string;
+  telephone: string;
+  typeEvenement: string;
+  adresse: string;
+  nombreInvites: number;
+  theme: string;
+  message: string;
+}
+
 const DevisUltra: React.FC = () => {
-  const [currentStep, setCurrentStep] = useState<'category' | 'services' | 'date' | 'summary' | 'form'>('category');
+  const [currentStep, setCurrentStep] = useState<'category' | 'services' | 'date' | 'summary' | 'form' | 'success'>('category');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [majorationDate, setMajorationDate] = useState<number>(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Données du formulaire
+  const [formData, setFormData] = useState<FormData>({
+    nom: '',
+    email: '',
+    telephone: '',
+    typeEvenement: '',
+    adresse: '',
+    nombreInvites: 1,
+    theme: '',
+    message: ''
+  });
 
   const {
     devis,
@@ -21,10 +47,12 @@ const DevisUltra: React.FC = () => {
     isOptionSelectionnee,
     getSousTotalItem,
     changerDate,
-    dateEvenement
+    dateEvenement,
+    reinitialiserDevis
   } = useDevis();
 
   const { getPrestationsByCategory } = usePrestations();
+  const { createReservation } = useReservations();
 
   const categories = [
     { 
@@ -75,6 +103,107 @@ const DevisUltra: React.FC = () => {
     return sousTotal + majorationMontant;
   };
 
+  // Mettre à jour les données du formulaire
+  const updateFormData = (field: keyof FormData, value: string | number) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Soumettre le devis
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!dateEvenement) {
+      alert('Erreur: Date d\'événement manquante');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Préparer les données de la réservation
+      const prestationsData = {
+        items: devis.items.map(item => {
+          // Récupérer les détails de la prestation
+          const prestation = prestationsCategory.find(p => p.id === item.prestationId);
+          return {
+            prestationId: item.prestationId,
+            prestationNom: prestation?.nom || 'Service',
+            quantite: item.quantite,
+            sousTotal: item.sousTotal,
+            options: item.optionsSelectionnees.map(optionId => {
+              // Trouver l'option dans les prestations
+              let optionFound = null;
+              for (const prest of prestationsCategory) {
+                if (prest.options) {
+                  optionFound = prest.options.find((opt: any) => opt.id === optionId);
+                  if (optionFound) break;
+                }
+              }
+              return optionFound;
+            }).filter(Boolean)
+          };
+        }),
+        sous_total: devis.total,
+        majoration_date: majorationDate,
+        total_final: totalAvecMajoration()
+      };
+
+      // Générer un ID de devis unique
+      const devisId = `DV-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+
+      const reservationData = {
+        client_nom: formData.nom,
+        client_email: formData.email,
+        client_telephone: formData.telephone,
+        date_evenement: dateEvenement.toISOString().split('T')[0], // Format YYYY-MM-DD
+        montant: totalAvecMajoration(),
+        prestations: JSON.stringify(prestationsData), // Stocker en JSON
+        statut: 'en_attente' as const,
+        type_evenement: formData.typeEvenement || selectedCategory,
+        adresse_evenement: formData.adresse,
+        nombre_invites: formData.nombreInvites,
+        theme_couleurs: formData.theme,
+        message_client: formData.message,
+        devis_id: devisId // ID généré automatiquement
+      };
+
+      console.log('📤 Envoi réservation:', reservationData);
+
+      const result = await createReservation(reservationData);
+
+      if (result) {
+        console.log('✅ Réservation créée avec succès:', result.id);
+        setCurrentStep('success');
+        
+        // Optionnel: Réinitialiser le devis après succès
+        setTimeout(() => {
+          reinitialiserDevis();
+          setFormData({
+            nom: '',
+            email: '',
+            telephone: '',
+            typeEvenement: '',
+            adresse: '',
+            nombreInvites: 1,
+            theme: '',
+            message: ''
+          });
+        }, 3000);
+      } else {
+        throw new Error('Échec de création de la réservation');
+      }
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la soumission:', error);
+      alert('❌ Erreur lors de l\'envoi du devis. Veuillez réessayer.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleQuantiteChange = (prestationId: string, delta: number) => {
     const quantiteActuelle = getQuantiteItem(prestationId);
     const nouvelleQuantite = Math.max(0, quantiteActuelle + delta);
@@ -117,6 +246,24 @@ const DevisUltra: React.FC = () => {
     return ((steps.indexOf(currentStep) + 1) / steps.length) * 100;
   };
 
+  // Fonction pour recommencer un nouveau devis
+  const startNewQuote = () => {
+    reinitialiserDevis();
+    setSelectedCategory('');
+    setMajorationDate(0);
+    setFormData({
+      nom: '',
+      email: '',
+      telephone: '',
+      typeEvenement: '',
+      adresse: '',
+      nombreInvites: 1,
+      theme: '',
+      message: ''
+    });
+    setCurrentStep('category');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-orange-50 to-amber-50">
       
@@ -143,26 +290,31 @@ const DevisUltra: React.FC = () => {
                 {currentStep === 'date' && 'Choisissez la date'}
                 {currentStep === 'summary' && 'Résumé final'}
                 {currentStep === 'form' && 'Vos informations'}
+                {currentStep === 'success' && 'Demande envoyée !'}
               </p>
             </div>
 
-            <div className="text-right">
-              <div className="text-xs text-gray-500">Total</div>
-              <div className="text-lg font-bold text-orange-600">
-                {formaterPrix(totalAvecMajoration())}
+            {currentStep !== 'success' && (
+              <div className="text-right">
+                <div className="text-xs text-gray-500">Total</div>
+                <div className="text-lg font-bold text-orange-600">
+                  {formaterPrix(totalAvecMajoration())}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Progress Bar */}
-          <div className="mt-3">
-            <div className="w-full bg-gray-200 rounded-full h-1.5">
-              <div 
-                className="bg-gradient-to-r from-orange-400 to-rose-400 h-1.5 rounded-full transition-all duration-500"
-                style={{ width: `${getStepProgress()}%` }}
-              />
+          {currentStep !== 'success' && (
+            <div className="mt-3">
+              <div className="w-full bg-gray-200 rounded-full h-1.5">
+                <div 
+                  className="bg-gradient-to-r from-orange-400 to-rose-400 h-1.5 rounded-full transition-all duration-500"
+                  style={{ width: `${getStepProgress()}%` }}
+                />
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -557,7 +709,7 @@ const DevisUltra: React.FC = () => {
                 <p className="text-gray-600">Quelques infos pour personnaliser votre devis</p>
               </div>
 
-              <form className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Vos informations */}
                 <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-sm border border-white/50 p-5">
                   <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
@@ -572,6 +724,8 @@ const DevisUltra: React.FC = () => {
                       <input
                         type="text"
                         placeholder="Votre nom et prénom"
+                        value={formData.nom}
+                        onChange={(e) => updateFormData('nom', e.target.value)}
                         className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition-colors touch-manipulation"
                         required
                       />
@@ -584,6 +738,8 @@ const DevisUltra: React.FC = () => {
                       <input
                         type="email"
                         placeholder="votre@email.com"
+                        value={formData.email}
+                        onChange={(e) => updateFormData('email', e.target.value)}
                         className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition-colors touch-manipulation"
                         required
                       />
@@ -596,6 +752,8 @@ const DevisUltra: React.FC = () => {
                       <input
                         type="tel"
                         placeholder="06 12 34 56 78"
+                        value={formData.telephone}
+                        onChange={(e) => updateFormData('telephone', e.target.value)}
                         className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition-colors touch-manipulation"
                         required
                       />
@@ -614,7 +772,12 @@ const DevisUltra: React.FC = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Type d'événement *
                       </label>
-                      <select className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition-colors touch-manipulation">
+                      <select 
+                        value={formData.typeEvenement || selectedCategory}
+                        onChange={(e) => updateFormData('typeEvenement', e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition-colors touch-manipulation"
+                        required
+                      >
                         <option value="">Sélectionnez le type</option>
                         <option value="anniversaire">Anniversaire</option>
                         <option value="bapteme">Baptême</option>
@@ -631,6 +794,8 @@ const DevisUltra: React.FC = () => {
                       <textarea
                         rows={3}
                         placeholder="Adresse complète où aura lieu l'événement"
+                        value={formData.adresse}
+                        onChange={(e) => updateFormData('adresse', e.target.value)}
                         className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition-colors touch-manipulation resize-none"
                         required
                       />
@@ -644,6 +809,8 @@ const DevisUltra: React.FC = () => {
                         type="number"
                         min="1"
                         placeholder="Ex: 25"
+                        value={formData.nombreInvites}
+                        onChange={(e) => updateFormData('nombreInvites', parseInt(e.target.value) || 1)}
                         className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition-colors touch-manipulation"
                         required
                       />
@@ -656,6 +823,8 @@ const DevisUltra: React.FC = () => {
                       <input
                         type="text"
                         placeholder="Ex: Rose et doré, Licorne, Super-héros..."
+                        value={formData.theme}
+                        onChange={(e) => updateFormData('theme', e.target.value)}
                         className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition-colors touch-manipulation"
                       />
                     </div>
@@ -667,6 +836,8 @@ const DevisUltra: React.FC = () => {
                       <textarea
                         rows={3}
                         placeholder="Parlez-nous de vos attentes, idées spéciales, ou toute information utile..."
+                        value={formData.message}
+                        onChange={(e) => updateFormData('message', e.target.value)}
                         className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition-colors touch-manipulation resize-none"
                       />
                     </div>
@@ -714,10 +885,20 @@ const DevisUltra: React.FC = () => {
                 {/* Bouton envoi */}
                 <button
                   type="submit"
-                  className="w-full py-4 bg-gradient-to-r from-green-400 to-emerald-400 hover:from-green-500 hover:to-emerald-500 text-white font-bold rounded-xl transition-all duration-200 touch-manipulation shadow-lg flex items-center justify-center space-x-2"
+                  disabled={isSubmitting}
+                  className="w-full py-4 bg-gradient-to-r from-green-400 to-emerald-400 hover:from-green-500 hover:to-emerald-500 disabled:from-gray-400 disabled:to-gray-500 text-white font-bold rounded-xl transition-all duration-200 touch-manipulation shadow-lg flex items-center justify-center space-x-2"
                 >
-                  <span>🚀</span>
-                  <span>Envoyer ma demande de devis</span>
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      <span>Envoi en cours...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>🚀</span>
+                      <span>Envoyer ma demande de devis</span>
+                    </>
+                  )}
                 </button>
 
                 <div className="text-center text-xs text-gray-500 mt-3">
@@ -738,23 +919,101 @@ const DevisUltra: React.FC = () => {
               </div>
             </motion.div>
           )}
+
+          {/* Étape 6: Succès */}
+          {currentStep === 'success' && (
+            <motion.div
+              key="success"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="space-y-6 text-center"
+            >
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-3xl border border-green-200 p-8">
+                <div className="text-6xl mb-4">🎉</div>
+                <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                  Demande envoyée !
+                </h2>
+                <p className="text-lg text-gray-700 mb-6">
+                  Votre demande de devis a été transmise avec succès.<br/>
+                  Nous vous recontacterons rapidement !
+                </p>
+                
+                <div className="bg-white/80 rounded-2xl p-6 mb-6">
+                  <h3 className="text-lg font-bold text-green-700 mb-3">✅ Ce qui va se passer :</h3>
+                  <div className="space-y-2 text-sm text-gray-700">
+                    <div className="flex items-center space-x-2">
+                      <span>📧</span>
+                      <span>Confirmation par email sous quelques minutes</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span>📞</span>
+                      <span>Appel de notre équipe dans les 24h</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span>📋</span>
+                      <span>Devis personnalisé et détaillé</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span>🎨</span>
+                      <span>Conseils pour votre événement</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-center space-y-3">
+                  <button
+                    onClick={startNewQuote}
+                    className="bg-gradient-to-r from-orange-400 to-rose-400 hover:from-orange-500 hover:to-rose-500 text-white px-8 py-3 rounded-xl font-bold transition-all duration-200 touch-manipulation shadow-lg"
+                  >
+                    🆕 Nouveau devis
+                  </button>
+                  
+                  <div className="text-xs text-gray-500 mt-4">
+                    Référence: DV-{new Date().getTime().toString().slice(-6)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-sm border border-white/50 p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-3">📞 Contact rapide</h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  Une question ? Besoin d'un renseignement urgent ?
+                </p>
+                <div className="flex justify-center space-x-4">
+                  <a 
+                    href="tel:+33123456789" 
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors touch-manipulation"
+                  >
+                    📞 Appeler
+                  </a>
+                  <a 
+                    href="mailto:contact@example.com" 
+                    className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors touch-manipulation"
+                  >
+                    📧 Email
+                  </a>
+                </div>
+              </div>
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
 
       {/* Bottom Navigation Mobile - Fixe */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200 p-4 z-50">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <div className="text-xs text-gray-500">Total estimé</div>
-            <div className="text-lg font-bold text-orange-600">
-              {formaterPrix(totalAvecMajoration())}
+      {currentStep !== 'form' && currentStep !== 'success' && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200 p-4 z-50">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <div className="text-xs text-gray-500">Total estimé</div>
+              <div className="text-lg font-bold text-orange-600">
+                {formaterPrix(totalAvecMajoration())}
+              </div>
+              {majorationDate > 0 && (
+                <div className="text-xs text-amber-600">+{majorationDate}% majoration</div>
+              )}
             </div>
-            {majorationDate > 0 && (
-              <div className="text-xs text-amber-600">+{majorationDate}% majoration</div>
-            )}
-          </div>
-          
-          {currentStep !== 'form' && (
+            
             <button
               onClick={nextStep}
               disabled={
@@ -769,9 +1028,9 @@ const DevisUltra: React.FC = () => {
               {currentStep === 'date' && '📋 Voir résumé'}
               {currentStep === 'summary' && '📝 Mes infos'}
             </button>
-          )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
